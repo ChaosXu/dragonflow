@@ -1,0 +1,16 @@
+@startuml create port
+Neutron->DFMechDriver:create_port_postcommit
+activate DFMechDriver
+' port = context.current
+DFMechDriver->l2:l2lport = logical_port_from_neutron_port(port)
+
+alt  lport.topic == ''
+    note over DFMechDriver
+        Update topic for FIP ports
+    end note
+    DFMechDriver->DFMechDriver:lport.topic = _get_lswitch_topic(port)
+end
+DFMechDriver->NbApi:create(lport)
+DFMechDriver-->Neutron: port
+deactivate DFMechDriver
+@enduml

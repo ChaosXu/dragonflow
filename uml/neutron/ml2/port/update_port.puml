@@ -1,0 +1,30 @@
+@startuml update port
+Neutron->DFMechDriver:update_port_precommit
+activate DFMechDriver
+DFMechDriver->l2:validate_extra_dhcp_option(port)
+deactivate DFMechDriver
+Neutron->DFMechDriver:update_post_precommit
+activate DFMechDriver
+' updated_port = context.current
+DFMechDriver->df_utils:topic=get_obj_topic(updated_port)
+DFMechDriver->l2:lean_port = LogicalPort(id=updated_port['id'],topic=topic)
+alt not NbApi.get(lean_port):
+    ' REVISIT(xiaohhui): Should we unify the check before update nb db?
+    DFMechDriver-->Neutron:
+end
+' Here we do not want port status update to trigger
+' sending event to other compute node.
+alt (cfg.CONF.df.enable_neutron_notifier and n_const.DEVICE_OWNER_COMPUTE_PREFIX in updated_port['device_owner'] and context.status != context.original_status and (context.status == n_const.PORT_STATUS_DOWN or context.status == n_const.PORT_STATUS_ACTIVE))
+    DFMechDriver-->Neutron:
+end
+DFMechDriver->l2:lport =logical_port_from_neutron_port(updated_port)
+' Update topic for FIP ports
+alt lport.topic == ''
+    DFMechDriver->DFMechDriver:lport.topic = _get_lswitch_topic(updated_port)
+end
+DFMechDriver->NbApi:update(lport)
+
+
+DFMechDriver-->Neutron:updated_port
+deactivate DFMechDriver
+@enduml

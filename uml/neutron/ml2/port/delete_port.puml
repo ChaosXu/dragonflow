@@ -1,0 +1,16 @@
+@startuml delete port
+Neutron->DFMechDriver:delete_port_postcommit
+activate DFMechDriver
+'port = context.current
+DFMechDriver->port:port_id = ['id']
+DFMechDriver->df_utils:topic =get_obj_topic(port)
+DFMechDriver->l2:lean_port = LogicalPort(id=port_id,topic=topic)
+
+' Update topic for FIP ports
+alt lean_port.topic == ''
+    DFMechDriver->DFMechDriver:lean_port.topic = _get_lswitch_topic(port)
+
+    DFMechDriver->NbApi:delete(lean_port)
+end
+deactivate DFMechDriver
+@enduml
