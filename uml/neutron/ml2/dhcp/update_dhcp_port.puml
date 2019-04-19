@@ -1,0 +1,8 @@
+@startuml update dhcp port
+Neutron->DFDHCPModule:_update_dhcp_port
+activate DFDHCPModule
+DFDHCPModule->port:fixed_ips = ['fixed_ips']
+DFDHCPModule->fixed_ips:append({'subnet_id': subnet['id']})
+DFDHCPModule->core_plugin:update_port(context, port['id'], {'port': port})
+deactivate
+@enduml

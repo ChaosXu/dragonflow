@@ -1,0 +1,19 @@
+@startuml on subnet create
+Neutron->DFDHCPModule:_subnet_create_handler
+activate DFDHCPModule
+DFDHCPModule->kwargs:context = ['context']
+DFDHCPModule->kwargs:c       subnet = ['subnet']
+alt not _is_subnet_enable_dhcp(subnet)
+    DFDHCPModule-->Neutron:
+end
+DFDHCPModule->DFDHCPModule:_add_dhcp_subnet_to_network(context, subnet['network_id'],subnet)
+activate DFDHCPModule
+DFDHCPModule->DFDHCPModule:port = _get_dhcp_port_by_network(context, network)
+alt port is not None:
+    DFDHCPModule->DFDHCPModule:_update_dhcp_port(context, port, subnet)
+else
+    DFDHCPModule->DFDHCPModule:_create_dhcp_port(context, subnet)
+end
+deactivate
+deactivate
+@enduml

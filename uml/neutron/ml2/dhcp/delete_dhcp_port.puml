@@ -1,0 +1,22 @@
+@startuml delete dhcp port
+Neutron->DFDHCPModule:_remove_dhcp_subnet_from_network
+activate DFDHCPModule
+DFDHCPModule->DFDHCPModule:port = _get_dhcp_port_by_network(context, network_id)
+alt port is None
+    DFDHCPModule->Neutron
+end
+
+note over DFDHCPModule
+    fixed_ips = port['fixed_ips']
+    port['fixed_ips'] = [fixed_ip for fixed_ip in
+    fixed_ips if
+    fixed_ip['subnet_id'] != subnet['id']]
+end note
+alt not port['fixed_ips']
+    ' No subnet that enabled DHCP on the port any more
+    DFDHCPModule->core_plugin:delete_port(context, port['id'])
+else
+    DFDHCPModule->core_plugin:update_port(context, port['id'], {'port': port})
+end
+deactivate
+@enduml

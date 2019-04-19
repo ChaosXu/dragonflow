@@ -1,0 +1,10 @@
+@startuml on subnet delete
+Neutron->DFDHCPModule:_subnet_delete_handler
+activate DFDHCPModule
+DFDHCPModule->kwargs:context = ['context']
+DFDHCPModule->kwargs:subnet = ['subnet']
+alt DFDHCPModule->DFDHCPModule:_is_subnet_enable_dhcp(subnet)
+    DFDHCPModule->DFDHCPModule:_remove_dhcp_subnet_from_network(context,subnet['network_id'],subnet)
+end
+deactivate
+@enduml
