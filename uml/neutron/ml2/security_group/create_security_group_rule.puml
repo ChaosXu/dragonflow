@@ -1,0 +1,14 @@
+@startuml create security_group
+Neutron->DFMechDriver:create_security_group_rule
+activate DFMechDriver
+note over DFMechDriver
+    sg_rule = kwargs['security_group_rule']
+    sg_id = sg_rule['security_group_id']
+    context = kwargs['context']
+end note
+DFMechDriver->core_plugin:sg = get_security_group(context, sg_id)
+DFMechDriver->neutron_secgroups:sg_obj = security_group_from_neutron_obj(sg)
+DFMechDriver->NbApi:update(sg_obj)
+DFMechDriver-->Neutron:sg_rule
+deactivate DFMechDriver
+@enduml

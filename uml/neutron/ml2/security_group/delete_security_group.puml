@@ -1,0 +1,9 @@
+@startuml delete security group
+Neutron->DFMechDriver:delete_security_group
+activate DFMechDriver
+'sg = payload.latest_state
+DFMechDriver->df_utils:topic get_obj_topic(sg)
+DFMechDriver->secgroups:sg_obj = SecurityGroup(id=sg['id'], topic=topic)
+DFMechDriver->NbApi:delete(sg_obj)
+deactivate DFMechDriver
+@enduml

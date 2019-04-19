@@ -1,0 +1,14 @@
+@startuml delete security_group
+Neutron->DFMechDriver:delete_security_group_rule
+activate DFMechDriver
+note over DFMechDriver
+    context = kwargs['context']
+    sgr_id = kwargs['security_group_rule_id']
+    sg_id = kwargs['security_group_id']
+end note
+DFMechDriver->core_plugin:sg = get_security_group(context, sg_id)
+DFMechDriver->neutron_secgroups:sg_obj = security_group_from_neutron_obj(sg)
+DFMechDriver->NbApi:update(sg_obj)
+
+deactivate DFMechDriver
+@enduml

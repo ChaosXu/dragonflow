@@ -1,0 +1,24 @@
+@startuml update security_group
+Neutron->DFMechDriver:update_security_group
+activate DFMechDriver
+note over DFMechDriver
+    sg = kwargs['security_group']
+    sg_name = sg.get('name')
+    rules = sg.get('security_group_rules', [])
+end note
+loop rule in rules:
+    alt try
+        DFMechDriver->rule:rule['topic'] = pop('project_id')
+    else except KeyError:
+        DFMechDriver->rule:rule['topic'] = op('tenant_id', None)
+    end
+end
+DFMechDriver->neutron_secgroups:sg_obj = security_group_from_neutron_obj(sg)
+alt event == events.AFTER_CREATE:
+    DFMechDriver->NbApi:create(sg_obj)
+else event == events.AFTER_UPDATE:
+    DFMechDriver->NbApi:update(sg_obj)
+end
+DFMechDriver-->Neutron:sg_obj
+deactivate DFMechDriver
+@enduml
