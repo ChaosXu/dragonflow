@@ -1,0 +1,12 @@
+@startuml delete subnet
+Neutron->DFMechDriver:delete_subnet_postcommit
+activate DFMechDriver
+' subnet = context.current
+' net_id = subnet['network_id']
+' subnet_id = subnet['id']
+DFMechDriver->core_plugin:networ=kget_network(context._plugin_context,net_id)
+DFMechDriver->df_utils:topic = get_obj_topic(network)
+DFMechDriver->NbApi:delete(l2.Subnet(id=subnet_id))
+DFMechDriver->NbApi:update(l2.LogicalSwitch(id=net_id, topic=topic,version=network['revision_number']))
+deactivate DFMechDriver
+@enduml

@@ -1,0 +1,13 @@
+@startuml create network
+Neutron->DFMechDriver:create_network_precommit
+note over DFMechDriver
+    check if only one provider
+end note
+Neutron->DFMechDriver:create_network_postcommit
+activate DFMechDriver
+'   network = context.current
+    DFMechDriver->l2:lswitch=logical_switch_from_neutron_network(network)
+    DFMechDriver->NbApi:create(lswitch)
+    DFMechDriver-->Neutron:network
+deactivate DFMechDriver
+@enduml

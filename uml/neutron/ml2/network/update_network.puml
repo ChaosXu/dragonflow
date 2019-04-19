@@ -1,0 +1,10 @@
+@startuml update network
+Neutron->DFMechDriver:update_network_postcommit
+activate DFMechDriver
+' network = context.current
+' network_id = network['id']
+DFMechDriver->df_utils:topic = get_obj_topic(network)
+DFMechDriver->l2:logicalSwitch=LogicalSwitch(id=network_id,topic=topic)
+DFMechDriver->NbApi:delete(logicalSwitch)
+deactivate DFMechDriver
+@enduml

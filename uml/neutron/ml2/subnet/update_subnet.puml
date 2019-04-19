@@ -1,0 +1,12 @@
+@startuml update subnet
+Neutron->DFMechDriver:update_subnet_postcommit
+activate DFMechDriver
+' new_subnet = context.current
+DFMechDriver->l2:subnet =subnet_from_neutron_subnet(new_subnet)
+DFMechDriver->NbApi:update(subnet)
+' network = context.network.current
+DFMechDriver->df_utils:topic = get_obj_topic(network)
+DFMechDriver->NbApi:update(l2.LogicalSwitch(id=network['id'], topic=topic,version=network['revision_number']))
+DFMechDriver-->Neutron:new_subnet
+deactivate DFMechDriver
+@enduml

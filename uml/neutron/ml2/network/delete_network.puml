@@ -1,0 +1,9 @@
+@startuml delete network
+Neutron->DFMechDriver:delete_network_postcommit
+activate DFMechDriver
+' network = context.current
+DFMechDriver->l2:lswitch = logical_switch_from_neutron_network(network)
+DFMechDriver->NbApi:update(lswitch)
+DFMechDriver-->Neutron:network
+deactivate DFMechDriver
+@enduml
