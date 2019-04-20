@@ -1,0 +1,14 @@
+@startuml disassociate floatingip
+Neutron->DFL3AgentlessRouterPlugin:disassociate_floatingips
+activate DFL3AgentlessRouterPlugin
+alt context.session.begin(subtransactions=True):
+    DFL3AgentlessRouterPlugin->DFL3AgentlessRouterPlugin:floating_ips = _get_floatingips_by_port_id(context, port_id)
+    DFL3AgentlessRouterPlugin->super:router_ids = disassociate_floatingips(context, port_id, do_notify)
+
+    loop floating_ip in floating_ips
+        DFL3AgentlessRouterPlugin->nb_api:update(neutron_l3.build_floating_ip_from_ovo_floating_ip(floating_ip))
+    end
+end
+DFL3AgentlessRouterPlugin->neutron: router_ids
+deactivate
+@enduml

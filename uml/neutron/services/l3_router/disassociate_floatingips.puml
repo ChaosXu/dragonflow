@@ -1,0 +1,13 @@
+@startuml delete floatingip
+Neutron->DFL3AgentlessRouterPlugin:delete_floatingip
+activate DFL3AgentlessRouterPlugin
+DFL3AgentlessRouterPlugin->DFL3AgentlessRouterPlugin:floatingip = get_floatingip(context, fip_id)
+DFL3AgentlessRouterPlugin->super:delete_floatingip(context, fip_id)
+alt try
+    DFL3AgentlessRouterPlugin->df_utils:topic = get_obj_topic(floatingip)
+    DFL3AgentlessRouterPlugin->nb_api:delete(l3.FloatingIp(id=fip_id, topic=topic))
+else except df_exceptions.DBKeyNotFound
+    DFL3AgentlessRouterPlugin->LOG:exception("floatingip %s is not found in DF DB", fip_id)
+end
+deactivate
+@enduml

@@ -1,0 +1,26 @@
+@startuml add router interface
+Neutron->DFL3AgentlessRouterPlugin:add_router_interface
+activate DFL3AgentlessRouterPlugin
+DFL3AgentlessRouterPlugin->super:router_port_info = add_router_interface(context, router_id, interface_info)
+
+DFL3AgentlessRouterPlugin-> DFL3AgentlessRouterPlugin:router = get_router(context, router_id)
+DFL3AgentlessRouterPlugin->core_plugin:port = get_port(context, router_port_info['port_id'])
+DFL3AgentlessRouterPlugin->core_plugin:subnet = get_subnet(context,router_port_info['subnet_id'])
+note over DFL3AgentlessRouterPlugin
+    cidr = netaddr.IPNetwork(subnet['cidr'])
+    network = "%s/%s" % (port['fixed_ips'][0]['ip_address'],str(cidr.prefixlen))
+end note
+DFL3AgentlessRouterPlugin->df_utils:port_topic = get_obj_topic(port)
+DFL3AgentlessRouterPlugin->nb_api:logical_port = get(l2.LogicalPort(id=port['id'],topic=port_topic))
+DFL3AgentlessRouterPlugin->df_utils:router_topic =get_obj_topic(router)
+DFL3AgentlessRouterPlugin->neutron_l3:logical_router_port = build_logical_router_port(router_port_info, mac=port['mac_address'],network=network, unique_key=logical_port.unique_key)
+DFL3AgentlessRouterPlugin->nb_api.:lrouter = get(l3.LogicalRouter(id=router_id,topic=router_topic))
+note over DFL3AgentlessRouterPlugin
+    lrouter.version = router['revision_number']
+    lrouter.add_router_port(logical_router_port)
+end note
+DFL3AgentlessRouterPlugin->nb_api:update(lrouter)
+DFL3AgentlessRouterPlugin->core_plugin:update_port_status(context,port['id'],const.PORT_STATUS_ACTIVE)
+DFL3AgentlessRouterPlugin-->neutron: router_port_info
+deactivate
+@enduml

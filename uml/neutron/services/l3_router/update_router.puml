@@ -1,0 +1,13 @@
+@startuml update or delete router
+Neutron->DFL3AgentlessRouterPlugin:update_router
+activate DFL3AgentlessRouterPlugin
+DFL3AgentlessRouterPlugin->super:update_router(context,rouer)
+DFL3AgentlessRouterPlugin->neutron_l3:lrouter = logical_router_from_neutron_router(router)
+alt try
+    DFL3AgentlessRouterPlugin->nb_api:update(lrouter)
+else except df_exceptions.DBKeyNotFound:
+    DFL3AgentlessRouterPlugin->LOG:debug("router %s is not found in DF DB", router_id)
+end
+DFL3AgentlessRouterPlugin-->Neutron:router
+deactivate
+@enduml

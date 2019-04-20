@@ -1,0 +1,9 @@
+@startuml create router
+Neutron->DFL3AgentlessRouterPlugin:create_router
+activate DFL3AgentlessRouterPlugin
+DFL3AgentlessRouterPlugin->super:ceater_router(context,rouer)
+DFL3AgentlessRouterPlugin->neutron_l3:lrouter = logical_router_from_neutron_router(router)
+DFL3AgentlessRouterPlugin->nb_api:create(lrouter)
+DFL3AgentlessRouterPlugin-->Neutron:router
+deactivate
+@enduml

@@ -1,0 +1,22 @@
+@startuml on port update
+
+Neutron->DFL3AgentlessRouterPlugin:_update_port_handler
+activate DFL3AgentlessRouterPlugin
+' Handle the event that a port changes status to ACTIVE or DOWN
+DFL3AgentlessRouterPlugin->kwargs:context = ['context']
+DFL3AgentlessRouterPlugin->kwargs:port = ['port']
+DFL3AgentlessRouterPlugin->kwargs:orig_port = ['original_port']
+alt port['status'] == orig_port['status']
+    ' Change not relevant
+    DFL3AgentlessRouterPlugin-->Neutron
+end
+
+DFL3AgentlessRouterPlugin->DFL3AgentlessRouterPlugin:floatingips = get_floatingips(context.elevated(),filters={'port_id': [port['id']]})
+DFL3AgentlessRouterPlugin->DFL3AgentlessRouterPlugin:new_status = _port_status_to_floatingip_status(port['status'])
+
+loop floatingip in floatingips
+    DFL3AgentlessRouterPlugin->DFL3AgentlessRouterPlugin:update_floatingip_status(context,floatingip['id'],new_status)
+end
+
+deactivate
+@enduml

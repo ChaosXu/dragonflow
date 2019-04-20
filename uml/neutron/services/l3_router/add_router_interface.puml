@@ -1,0 +1,17 @@
+@startuml remove router interface
+Neutron->DFL3AgentlessRouterPlugin:remove_router_interface
+activate DFL3AgentlessRouterPlugin
+DFL3AgentlessRouterPlugin->super:router_port_info=remove_router_interface(context, router_id, interface_info)
+DFL3AgentlessRouterPlugin->DFL3AgentlessRouterPlugin:router = get_router(context, router_id)
+alt try:
+    DFL3AgentlessRouterPlugin->df_utils:topic = get_obj_topic(router)
+    DFL3AgentlessRouterPlugin->nb_api:lrouter = get(l3.LogicalRouter(id=router_id, topic=topic))
+    DFL3AgentlessRouterPlugin->lrouter:remove_router_port(router_port_info['port_id'])
+    DFL3AgentlessRouterPlugin->router:lrouter.version = ['revision_number']
+    DFL3AgentlessRouterPlugin->nb_api:update(lrouter)
+else except df_exceptions.DBKeyNotFound:
+    DFL3AgentlessRouterPlugin->LOG:exception("logical router %s is not found in DF DB, ","suppressing delete_lrouter_port ","exception", router_id)
+    DFL3AgentlessRouterPlugin->neutron: router_port_info
+end
+deactivate
+@enduml

@@ -1,0 +1,17 @@
+@startuml create floatingip
+Neutron->DFL3AgentlessRouterPlugin:create_floatingip
+activate DFL3AgentlessRouterPlugin
+DFL3AgentlessRouterPlugin->DFL3AgentlessRouterPlugin:initial_status = _port_to_floatingip_status(context,floatingip['floatingip'].get('port_id'))
+DFL3AgentlessRouterPlugin->super:floatingip_dict = create_floatingip(context, floatingip, initial_status=initial_status)
+
+DFL3AgentlessRouterPlugin->DFL3AgentlessRouterPlugin:floatingip_port = _get_floatingip_port(context, floatingip_dict['id'])
+
+DFL3AgentlessRouterPlugin->neutron_ls:nb_fip = build_floating_ip_from_neutron_floating_ip(floatingip_dict)
+note over DFL3AgentlessRouterPlugin
+nb_fip.floating_lport = floatingip_port['id']
+nb_fip.floating_ip_address = floatingip_dict['floating_ip_address']
+end note
+DFL3AgentlessRouterPlugin->nb_api:create(nb_fip)
+DFL3AgentlessRouterPlugin->neutron:floatingip_dict
+deactivate
+@enduml
