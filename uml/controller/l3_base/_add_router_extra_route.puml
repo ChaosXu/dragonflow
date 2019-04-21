@@ -1,0 +1,58 @@
+@startuml add new router port
+L3AppMixin->L3AppMixin:_add_router_extra_route(self,router,route)
+activate L3AppMixin
+note over L3AppMixin
+    Add extra route to router.
+end note
+
+L3AppMixin->LOG:debug('Add extra route %(route)s to router %(router)s',{'route': route, 'router': router})
+
+L3AppMixin->L3AppMixin:router_port = _get_gateway_port_by_ip(router, route.nexthop)
+L3AppMixin->L3AppMixin:lport = _get_port_by_lswitch_and_ip(route.nexthop,router_port.lswitch.id)
+loop not lport
+    L3AppMixin->LOG:debug("lport with IP %s doesn't exist, skip adding ""extra route.", route.nexthop)
+    L3AppMixin->L3AppMixin:_add_to_route_cache(ROUTE_TO_ADD, router_id, route)
+    L3AppMixin-->L3AppMixin
+end
+L3AppMixin->L3AppMixin:_add_extra_route_to_router(router.unique_key,router_port.mac,lport.unique_key,lport.mac, route)
+activate L3AppMixin
+note over L3AppMixin
+    Add extra route to router.
+    @param router_unique_key: The unique_key of router where the extra
+    route belongs to
+    @param router_if_mac: The mac address of related router port
+    @param lport_unique_key: The unique_key of lport whick will act as
+    nexthop.
+    @param lport_mac: The mac address of lport which will act as nexthop
+    @param route: The extra route dict
+end note
+L3AppMixin->LOG:info('Add extra route %s to router', route)
+
+note over L3AppMixin
+    Install openflow entry for extra route, only packets come from
+    the same subnet as nexthop port can use extra route.
+    Match: ip, reg5=router_unique_key, dl_dst=router_if_mac,
+    nw_dst=destination,
+    Actions:ttl-1, mod_dl_src=router_if_mac, mod_dl_dst=lport_mac,
+    load_reg7=next_hop_port_key,
+    goto: egress_table
+end note
+L3AppMixin->L3AppMixin:match = _generate_extra_route_match(router_unique_key,router_if_mac,route.destination)
+
+note over L3AppMixin
+    actions = [
+    parser.OFPActionDecNwTtl(),
+    parser.OFPActionSetField(eth_src=router_if_mac),
+    parser.OFPActionSetField(eth_dst=lport_mac),
+    parser.OFPActionSetField(reg7=lport_unique_key),
+    ]
+    action_inst = parser.OFPInstructionActions(
+    ofproto.OFPIT_APPLY_ACTIONS, actions)
+    goto_inst = parser.OFPInstructionGotoTable(const.EGRESS_TABLE)
+    inst = [action_inst, goto_inst]
+end note
+L3AppMixin->L3AppMixin:mod_flow(inst=inst,table_id=const.L3_LOOKUP_TABLE,priority=const.PRIORITY_VERY_HIGH,match=match)
+deactivate
+L3AppMixin->L3AppMixin:_add_to_route_cache(ROUTE_ADDED, router_id, route)
+deactivate
+@enduml

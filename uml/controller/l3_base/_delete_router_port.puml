@@ -1,0 +1,48 @@
+@startuml delete router port
+L3AppMixin->L3AppMixin:_delete_router_port
+activate L3AppMixin
+note over L3AppMixin
+    Handle the removal of a router interface from a router. Undoes the
+    actions in #_add_new_router_port.
+    :param router:        The router on which the interface is removed
+    :type router:         LogicalRouter model object
+    :param router_port:   The router interface being removed
+    :type router_port:    RouterInterface model object
+end note
+L3AppMixin->LOG:info("Removing logical router interface = %s",router_port)
+note over L3AppMixin
+    local_network_id = router_port.lswitch.unique_key
+
+    parser = self.parser
+    ofproto = self.ofproto
+    router_unique_key = router.unique_key
+    ip = router_port.network.ip
+    mac = router_port.mac
+
+    # Delete rule for making packets go from L2_LOOKUP_TABLE
+    # to L3_LOOKUP_TABLE
+    match = parser.OFPMatch()
+    match.set_metadata(local_network_id)
+    match.set_dl_dst(os_ken_mac_lib.haddr_to_bin(mac))
+end note
+L3AppMixin->L3AppMixin:mod_flow(table_id=const.L2_LOOKUP_TABLE,command=ofproto.OFPFC_DELETE,priority=const.PRIORITY_HIGH,match=match)
+
+note over L3AppMixin
+    Delete ARP & ICMP responder for router interface
+end note
+loop ip.version == common_const.IP_VERSION_4
+    L3AppMixin->arp_responder:ArpResponder(self, local_network_id, ip).remove()
+    L3AppMixin->icmp_responder:ICMPResponder(self, ip,router_key=router_unique_key).remove()
+end
+note over L3AppMixin
+    Delete rule for packets whose destination is router interface.
+end note
+L3AppMixin->L3AppMixin:match = _get_router_interface_match(router_unique_key, ip)
+L3AppMixin->DFlowApp:mod_flow(table_id=const.L3_LOOKUP_TABLE,command=ofproto.OFPFC_DELETE,priority=const.PRIORITY_HIGH,match=match)
+note over L3AppMixin
+    # Delete rule for routing packets to subnet of this router port
+end note
+L3AppMixin->L3AppMixin:match = _get_router_route_match(router_unique_key,router_port.network)
+L3AppMixin->DFlowApp:mod_flow(table_id=const.L3_LOOKUP_TABLE,command=ofproto.OFPFC_DELETE,priority=const.PRIORITY_MEDIUM,match=match)
+deactivate
+@enduml

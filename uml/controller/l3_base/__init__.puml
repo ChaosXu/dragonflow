@@ -1,0 +1,11 @@
+@startuml l3  init
+Controller->L3AppMixin:_init_
+activate L3AppMixin
+L3AppMixin->L3AppMixin:route_cache = {}
+
+L3AppMixin->cfg:selft.conf = CONF.df_l3_app
+L3AppMixin ->df_utils:self.ttl_invalid_handler_rate_limit = RateLimiter(max_rate=self.conf.router_ttl_invalid_max_rate,time_unit=1)
+L3AppMixin->df_utils:self.port_icmp_unreach_respond_rate_limit = RateLimiter(max_rate=self.conf.router_port_unreach_max_rate,time_unit=1)
+L3AppMixin->api:register_table_handler(const.L3_LOOKUP_TABLE,self.packet_in_handler)
+deactivate
+@enduml

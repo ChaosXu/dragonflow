@@ -1,0 +1,19 @@
+@startuml logical port unbind local or remote
+DB->L3AppMixin:_remove_port_event_handler(self,lport)
+activate L3AppMixin
+L3AppMixin->LOG:debug('remove %(locality)s port: %(lport)s',{'lport': lport,'locality': 'local' if lport.is_local else 'remote'})
+note over L3AppMixin
+    # Let the router update process to delete flows for concrete
+    # router port, if there is any.
+end note
+alt lport.device_owner != common_const.DEVICE_OWNER_ROUTER_INTF
+    L3AppMixin->L3AppMixin:_remove_port(lport)
+    activate L3AppMixin
+    note over L3AppMixin
+        Remove port which is not a router interface.
+    end note
+    L3AppMxin->L3AppMxin:_reprocess_to_delete_route(lport)
+    deactivate
+end
+deactivate
+@enduml

@@ -1,0 +1,12 @@
+@startuml router deleted
+DB->L3AppMixin:router_deleted(self,router)
+activate L3AppMixin
+loop port in router.ports:
+    L3AppMixin->L3AppMixin:_delete_router_port(router, port)
+end
+loop route in router.routes:
+    L3AppMixin->L3AppMixin:_delete_router_extra_route(router, route)
+end
+L3AppMixin->L3AppMixin:route_cache.pop(router.id, None)
+deactivate
+@enduml

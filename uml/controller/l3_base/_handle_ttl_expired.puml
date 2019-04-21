@@ -1,0 +1,53 @@
+@startuml  handle ttl expired
+ConcreteL3App->L3AppMixin:_handle_ttl_expired(self,msg)
+activate L3AppMixin
+note over L3AppMixin
+    This callback is called when the OVS switch reduced a packet's TTL
+    to 0.
+
+    Create an ICMP error packet, and return it.
+
+    :param msg: Packet in message
+    :type msg:  os_ken.ofproto.ofproto_v<version>_parser.OFPPacketIn
+end note
+alt self.ttl_invalid_handler_rate_limit()
+    L3AppMixin->LOG:warning("Get more than %(rate)s TTL invalid packets per ","second at table %(table)s",{'rate': self.conf.router_ttl_invalid_max_rate,'table': const.L3_LOOKUP_TABLE})
+    L3AppMixin-->ConcreateL3App
+end
+
+L3AppMixin->LOG:debug("Get an invalid TTL packet at table %s",const.L3_LOOKUP_TABLE)
+
+L3AppMixin->packet:pkt = Packet(msg.data)
+L3AppMixin->pkt:_pkt = get_protocol(ethernet.ethernet)
+L3AppMixin->msg:router_key = match.get('reg5')
+L3AppMixin->db_store:lrouter = get_one(l3.LogicalRouter(unique_key=router_key),index=l3.LogicalRouter.get_index('unique_key'))
+' router_port_ip = None
+loop port in lrouter.ports
+    alt port.lswitch.unique_key == msg.match.get('metadata'):
+        L3AppMixin->port:router_port_ip = network.ip
+        note over L3AppMixin
+            break
+        end note
+    end
+end
+
+alt router_port_ip
+    L3AppMixin->icmp_error_generator:icmp_ttl_pkt = generate(icmp.ICMP_TIME_EXCEEDED, icmp.ICMP_TTL_EXPIRED_CODE,msg.data, str(router_port_ip), pkt)
+    L3AppMixin->msg:unique_key = match.get('reg6')
+    L3AppMixin->DFlowApp:dispatch_packet(icmp_ttl_pkt, unique_key)
+    activate DFlowApp
+    DFlowApp->DFlowApp:reinject_packet(pkt,table_id=constants.INGRESS_DISPATCH_TABLE,actions=[self.parser.OFPActionSetField(reg7=unique_key),])
+    activate DFlowApp
+    DFlowApp->DFlowApp: datapath = datapath
+    DFlowApp->DFlowApp: ofproto = ofproto
+    alt table_id is not None:
+        DFlowApp->actions:append(parser.NXActionResubmitTable(table_id=table_id))
+    end
+    DFlowApp->datapath:send_msg(parser.OFPPacketOut(datapath=datapath,buffer_id=ofproto.OFP_NO_BUFFER,in_port=ofproto.OFPP_CONTROLLER,actions=actions,data=pkt))
+    deactivate
+    deactivate
+else
+    L3AppMixin->LOG:warning("The invalid TTL packet's destination mac %s ""can't be recognized.", e_pkt.dst)
+end
+deactivate
+@enduml

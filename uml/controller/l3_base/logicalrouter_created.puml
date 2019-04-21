@@ -1,0 +1,11 @@
+@startuml router created
+DB->L3AppMixin:router_created
+activate L3AppMixin
+loop new_port in router.ports:
+    L3AppMixin->L3AppMixin:_add_new_router_port(router, new_port)
+end
+loop route in router.routes
+    L3AppMixin->L3AppMixin:_add_router_extra_route(router, route)
+end
+deactivate
+@enduml

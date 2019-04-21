@@ -1,0 +1,71 @@
+@startuml add new router port
+L3AppMixin->L3AppMixin:_add_new_router_port
+activate L3AppMixin
+note over L3AppMixin
+    Handle the creation of a new router interface on the router.
+    * Match L2 address and update reg5
+    * Install ARP and ICMP responders
+    * Match packets with router as dst
+    * Add flows for  new route entries
+    :param router:        The router on which the interface is added
+    :type router:         LogicalRouter model object
+    :param router_port:   The router interface being added
+    :type router_port:    RouterInterface model object
+end note
+L3AppMixin->LOG:info("Adding new logical router interface = %r",router_port)
+L3AppMixin->       router_port:local_network_id = lswitch.unique_key
+note over L3AppMixin
+    parser = self.parser
+    ofproto = self.ofproto
+    mac = router_port.mac
+    router_unique_key = router.unique_key
+    dst_ip = router_port.network.ip
+    is_ipv4 = (netaddr.IPAddress(dst_ip).version == common_const.IP_VERSION_4)
+end note
+
+note over L3AppMixin
+    Add rule for making packets go from L2_LOOKUP_TABLE
+    to L3_LOOKUP_TABLE
+end note
+L3AppMixin->parser:match = OFPMatch()
+L3AppMixin->match:set_metadata(local_network_id)
+L3AppMixin->match:set_dl_dst(os_ken_mac_lib.haddr_to_bin(mac))
+L3AppMixin->parser:action = OFPActionSetField(reg5=router_unique_key)
+L3AppMixin->array:actions = [action]
+L3AppMixin->parser:action_inst = OFPInstructionActions(OFPIT_APPLY_ACTIONS, actions)
+L3AppMixin->parser:goto_inst = OFPInstructionGotoTable(L3_LOOKUP_TABLE)
+L3AppMixin->array:inst = [action_inst, goto_inst]
+L3AppMixin->L3AppMixin:mod_flow(inst=inst,table_id=L2_LOOKUP_TABLE,priority=PRIORITY_HIGH,match=match)
+
+note over L3AppMixin
+    Add router ARP & ICMP responder for IPv4 Addresses
+end note
+loop is_ipv4
+    L3AppMixin->arp_responder:ArpResponder(self,local_network_id,dst_ip, mac).add()
+    L3AppMixin->icmp_responder:ICMPResponder(self,dst_ip,router_key=router_unique_key).add()
+end
+
+note over L3AppMixin
+    If router interface is not concrete, send to local controller. local
+    controller will create icmp unreachable message. A virtual router
+    interface will not be in local cache, as it doesn't have chassis
+    information.
+end note
+L3AppMixin->L3AppMixin:lport = db_store.get_one(l2.LogicalPort(id=router_port.id))
+alt not lport
+    L3AppMixin->L3AppMixin:match = _get_router_interface_match(router_unique_key, dst_ip)
+    note over L3AppMixin
+        actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,ofproto.OFPCML_NO_BUFFER)]
+        action_inst = parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)
+    end note
+    L3AppMixin->L3AppMixin:mod_flow(inst=[action_inst],table_id=const.L3_LOOKUP_TABLE,priority=const.PRIORITY_HIGH,match=match)
+else
+    L3AppMixin->L3AppMixin:_add_concrete_router_interface(lport, router=router)
+end
+note over L3AppMixin
+    dd rule for routing packets to subnet of this router port
+end note
+L3AppMixin->L3AppMixin:match = _get_router_route_match(router_unique_key,router_port.network)
+L3AppMixin->L3AppMixin:_add_subnet_send_to_route(match, local_network_id, router_port)
+deactivate
+@enduml

@@ -1,0 +1,6 @@
+@startuml l3 switch features hamdler
+Controller->L3AppMixin:switch_features_handler
+activate L3AppMixin
+L3AppMixin->route_cache:clear()
+deactivate
+@enduml

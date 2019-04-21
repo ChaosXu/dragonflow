@@ -1,0 +1,47 @@
+@startuml logical port bind local or remote
+DB->L3AppMixi:_add_port_event_handler(self,lport)
+alt lport.device_owner == common_const.DEVICE_OWNER_ROUTER_INTF
+    L3AppMixin->L3AppMixin:_add_concrete_router_interface(lport)
+    activate L3AppMixin
+    note over L3AppMixin
+        The router interace is concrete, direct the packets to the real
+        port of router interface. The flow here will overwrite
+        the flow that packet-in the packets to local controller.
+
+        If the router is not given (or is None), try to get it from the
+        port's owner.
+
+        :param lport:   The router interface's concrete port
+        :type lport:    LogicalPort model object
+        :param router:  The owning router
+        :type lport:    LogicalRouter or None
+    end note
+    note over L3AppMixin
+        router = router or self.db_store.get_one(l3.LogicalRouter(id=lport.device_id))
+    end note
+    alt not router
+        L3AppMxin-->L3AppMixin
+    end
+    note over L3AppMixin
+        router_unique_key = router.unique_key
+        port_unique_key = lport.unique_key
+        match = self._get_router_interface_match(router_unique_key, lport.ip)
+        actions = [self.parser.OFPActionSetField(reg7=port_unique_key)]
+        action_inst = self.parser.OFPInstructionActions(
+        self.ofproto.OFPIT_APPLY_ACTIONS, actions)
+        goto_inst = self.parser.OFPInstructionGotoTable(
+        const.EGRESS_TABLE)
+        inst = [action_inst, goto_inst]
+    end note
+    L3AppMixin->DFlowApp:mod_flow(inst=inst,table_id=const.L3_LOOKUP_TABLE,priority=const.PRIORITY_HIGH,match=match)
+    deactivate
+else
+    L3AppMixin->L3ApppMixin:_add_port(lport)
+    activate L3AppMixin
+    note over L3AppMxin
+        Add port which is not a router interface."""
+    end note
+    L3AppMixn->L3AppMixin:_reprocess_to_add_route(lport)
+    deactivate
+end
+@enduml

@@ -1,0 +1,34 @@
+@startuml packet in
+Controller->L3ProactiveApp:packet_in_handler
+activate L3ProactiveApp
+note over L3ProactiveApp
+    Handle packets sent to the controller from OVS
+end note
+L3ProactiveApp->event:msg = msg
+L3ProactiveApp->L3AppMixn:router_function_packet_in_handler(msg)
+activate L3AppMixn
+note over L3AppMixin
+    React to packet as what a normal router will do.
+
+    TTL invalid and router port response will be handled in this method.
+    Return True if the packet is handled, so there is no need for further
+    handle.
+
+    :param msg: Packet in message
+    :type msg:  os_ken.ofproto.ofproto_v<version>_parser.OFPPacketIn
+end note
+
+alt msg.reason == self.ofproto.OFPR_INVALID_TTL
+    L3AppMixin->L3AppMixin:_handle_ttl_expired(msg)
+    activate L3AppMixin
+    
+    deactivate
+else msg.match.get('reg7')
+    L3AppMixin->L3ProactiveApp:_handle_invalid_dest(msg)
+else
+    L3AppMixin-->L3ProactiveApp: False
+end
+L3AppMixin-->L3ProactiveApp: True
+deactivate
+deactivate
+@enduml

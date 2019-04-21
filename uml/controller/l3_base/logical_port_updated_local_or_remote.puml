@@ -1,0 +1,14 @@
+@startuml logical port update local or remote
+DB->L3AppMixin:_update_port_event_handler(self,lport,orig_lport)
+activate L3AppMixin
+L3AppMixin->LOG:debug('remove %(locality)s port: %(lport)s',{'lport': lport,'locality': 'local' if lport.is_local else 'remote'})
+alt lport.device_owner != common_const.DEVICE_OWNER_ROUTER_INTF:
+    L3AppMixin->L3AppMixin:_update_port(lport)
+    activate L3AppMixin
+    note over L3AppMixin
+        pass
+    end note
+    deactivate
+end
+deactivate
+@enduml
