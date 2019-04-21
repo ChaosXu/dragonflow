@@ -1,0 +1,15 @@
+@startuml logical port bind remote
+DB->L2App:_add_remote_port
+L2App->L2App:_add_port(lport)
+activate L2App
+L2App->lport:mac = mac
+L2App->lport: network_id = lswitch.unique_key
+L2App->lport:port_key = unique_key
+
+' REVISIT(xiaohhui): This check might be removed when l3-agent is obsoleted.
+alt lport.device_owner != common_const.DEVICE_OWNER_ROUTER_INTF
+    L2App->L2App:_add_dst_classifier_flow_for_port(network_id, mac, port_key)
+end
+L2App->L2App:_add_l2_responders(lport)
+deactivate
+@enduml

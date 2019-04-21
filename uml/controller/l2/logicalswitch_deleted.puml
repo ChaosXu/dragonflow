@@ -1,0 +1,10 @@
+@startuml logical switch deleted
+DB->L2App:remove_logical_switch
+activate L2App
+L2App->lswitch:network_id = unique_key
+L2App->L2App:match = _get_multicast_broadcast_match(network_id)
+L2App->L2App:mod_flow(table_id=const.L2_LOOKUP_TABLE,command=ofproto.OFPFC_DELETE,priority=const.PRIORITY_HIGH,match=match)
+activate L2App
+deactivate
+deactivate
+@enduml

@@ -1,0 +1,34 @@
+@startuml logical port bind local
+DB->L2App:_add_local_port
+L2App->L2App:_add_port(lport)
+L2App->L2App:_aad_local_port_dispatch(lport)
+activate L2App
+L2App->lport:lport_id = id
+L2App->lport:mac = mac
+L2App->lport:port_key = unique_key
+L2App->lport:network_id = lswitch.unique_key
+L2App->lport:topic = topic
+
+note over L2App
+    Go to dispatch table according to unique metadata & mac
+end note
+L2App->parser:        match = FPMatch()
+L2App->match:set_metadata(network_id)
+L2App->match:set_dl_dst(haddr_to_bin(mac))
+L2App->parser:action=OFPActionSetField(reg7=port_key)
+L2App->actions: actions = [action]
+L2App->parser:action_inst = OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS, actions)
+L2App->parser:goto_inst = OFPInstructionGotoTable(INGRESS_CONNTRACK_TABLE)
+L2APP->inst: inst = [action_inst, goto_inst]
+L2App->L2App:mod_flow(inst=inst,table_id=const.INGRESS_DESTINATION_PORT_LOOKUP_TABLE,priority=const.PRIORITY_HIGH,match=match)
+
+note over L2App
+    Egress classifier for port
+end note
+L2App->parser:match = OFPMatch(reg7=port_key)
+L2App->parser:action=OFPInstructionGotoTable(const.INGRESS_CONNTRACK_TABLE)
+L2App->inst:inst = [action]
+L2App->L2App:mod_flow(inst=inst,table_id=const.EGRESS_TABLE,priority=const.PRIORITY_MEDIUM,match=match)
+L2App->L2App:_add_multicast_broadcast_handling_for_local_port(lport_id,port_key,network_id,topic)
+deactivate
+@enduml

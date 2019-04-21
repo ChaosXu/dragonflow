@@ -1,0 +1,34 @@
+@startuml  unbind_local
+DB->L2App:_remove_local_port
+L2App->L2App:_remove_port(lport)
+L2App->L2App:_remove_local_port_pipeline_interface(lport)
+activate L2App
+
+L2App->lport:local_network_id = lswitch.unique_key
+note over L2App
+    Remove egress classifier for port
+end note
+L2App->parser:match = OFPMatch(reg7=lport.unique_key)
+L2App->L2App:mod_flow(table_id=const.EGRESS_TABLE,command=ofproto.OFPFC_DELETE,priority=const.PRIORITY_MEDIUM,match=match)
+activate L2App
+deactivate
+
+note over L2App
+    Remove ingress destination lookup for port
+end note
+L2App->parser:match = OFPMatch()
+L2App->match:set_metadata(local_network_id)
+L2App->match:set_dl_dst(haddr_to_bin(lport.mac))
+L2App->L2App:mod_flow(table_id=const.INGRESS_DESTINATION_PORT_LOOKUP_TABLE,command=ofproto.OFPFC_DELETE,priority=const.PRIORITY_HIGH,match=match)
+activate L2App
+deactivate
+
+note over L2App
+    Update multicast and broadcast
+end note
+L2App->L2App:_del_multicast_broadcast_handling_for_local(lport.id,lport.topic,local_network_id)
+activate L2App
+deactivate
+
+deactivate
+@enduml

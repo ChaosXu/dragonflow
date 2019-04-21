@@ -1,0 +1,36 @@
+@startuml switch_features_handler
+Controller->L2App:switch_features_handler
+L2App->L2App:add_flow_go_to_table(SERVICES_CLASSIFICATION_TABLE,PRIORITY_DEFAULT,L2_LOOKUP_TABLE)
+L2App->L2App:add_flow_go_to_table(cARP_TABLE,PRIORITY_DEFAULT,L2_LOOKUP_TABLE)
+L2App->L2App:add_flow_go_to_table(IPV6_ND_TABLE,PRIORITY_DEFAULT,L2_LOOKUP_TABLE)
+
+note over L2App
+    ARP traffic => send to ARP table
+end note
+L2App->parser:match = OFPMatch(eth_type=0x0806)
+L2App->L2App:add_flow_go_to_table(SERVICES_CLASSIFICATION_TABLE,PRIORITY_MEDIUM,ARP_TABLE, match=match)
+
+note over L2App
+    Neighbor Discovery traffic => send to ND table
+end note
+L2App->parser:match = OFPMatch()
+L2App->match:set_dl_type(ether.ETH_TYPE_IPV6)
+L2App->match:set_ip_proto(in_proto.IPPROTO_ICMPV6)
+L2App->L2App:add_flow_go_to_table(SERVICES_CLASSIFICATION_TABLE,PRIORITY_MEDIUM,IPV6_ND_TABLE, match=match)
+
+note over L2App
+    Default: traffic => send to service classification table
+end note
+L2App->L2App:add_flow_go_to_table(EGRESS_CONNTRACK_TABLE,PRIORITY_DEFAULT,SERVICES_CLASSIFICATION_TABLE)
+
+note over L2App
+    Default: traffic => send to dispatch table
+end note
+L2App->L2App:add_flow_go_to_table(INGRESS_CONNTRACK_TABLE,PRIORITY_DEFAULT,INGRESS_DISPATCH_TABLE)
+
+note over L2App
+    Clear local networks cache so the multicast/broadcast flows
+    are installed correctly
+end note
+L2App->L2App:local_networks.clear()
+@enduml

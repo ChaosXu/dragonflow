@@ -1,0 +1,24 @@
+@startuml
+package dragonflow.controller.apps {
+    class DFlowApp
+    class L2App
+    class L3AppMixin
+    class L3ProactiveApp
+    class L3ReactiveApp
+    class DHCPApp
+    class DNATApp
+    class SGApp
+    class PortSecApp
+    class PortQosApp
+    L2App -|> DFlowApp
+    L3Proactive-|>DFlowApp
+    L3Proactive-|>L3AppMixin
+    L3ReactiveApp-|>DFlowApp
+    L3ReactiveApp-|>L3AppMixin
+    DHCPApp-|>DFlowApp
+    DNATApp-|>DFlowAPP
+    SGApp-|>DFlowApp
+    PortSecApp-|>DFlowApp
+    PortQosApp-|>DFlowApp
+}
+@enduml

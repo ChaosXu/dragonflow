@@ -1,0 +1,19 @@
+@startuml logical port unbind remote
+DB->L2App:_remove_remote_port
+L2App->L2App:_remove_remote_port
+activate L2App
+L2App->lport:mac = mac
+L2App->lport:        network_id = lswitch.unique_key
+L2App->lport: device_owner = device_owner
+
+note over L2App
+    Remove destination classifier for port
+end note
+alt device_owner != common_const.DEVICE_OWNER_ROUTER_INTF
+    L2App->L2App:_delete_dst_classifier_flow_for_port(network_id, mac)
+end
+L2App->L2App:_remove_l2_responders(lport)
+activate L2App
+deactivate
+deactivate
+@enduml

@@ -1,0 +1,9 @@
+@startuml init
+Controller->L2App: _init_
+L2App->DFlowApp:_init_(*args,**kwargs)
+note over L2App
+    self.local_networks = collections.defaultdict(_LocalNetwork)
+    self.integration_bridge = cfg.CONF.df.integration_bridge
+    self.is_install_l2_responder = cfg.CONF.df_l2_app.l2_responder
+end note
+@enduml
