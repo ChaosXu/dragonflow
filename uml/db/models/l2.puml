@@ -1,0 +1,45 @@
+@startuml l2  
+class LogicalSwitch {
+    is_external bool
+    mtu int
+    segmentation_id int
+    network_type string 
+    physical_network string
+}
+class Subnet {
+    enable_dhcp bool 
+    dhcp_ip IpAddress
+    cidr IpNetwork
+    gateway_ip IpAddress
+    dns_nameservers IpAddress[]
+    host_routes HostRoute[]
+    lswitch LogicalSwitch required
+}
+class AddressPair {
+    ip_address IpAddress
+    mac_address MacAddress
+}
+class DhcpParams
+class PortBinding {
+    chassis Chassis
+    vtep_address IpAddress
+    ip()
+    is_local()
+}
+class LogicalPort {
+    ips IpAddress[]
+    subnets Subnet[]
+    macs MacAddress[]
+    enabled bool
+    binding PortBinding
+    lswitch LogicalSwitch
+    security_groups SecurityGroup
+    allowed_address_pairs AddressPair[]
+    port_security_enabled bool
+    device_owner string
+    device_id string
+    qos_policy QosPolicy
+    dhcp_params DhcpParams
+    binding_vnic_type VNCI_TYPES
+}
+@enduml

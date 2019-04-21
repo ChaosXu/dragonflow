@@ -1,0 +1,18 @@
+@startuml l3
+class LogicalRouter {
+    ports LogicalRouterPort[]
+    routes HostRoute[]
+}
+class LogicalRouterPort {
+    mac string
+    lswitch LogicalSwitch
+    network IpNetowrkField
+}
+class FloatingIp {
+    floating_ip_address IpAddressField
+    fixed_ip_address IpAddressField
+    lport LogicalPort 
+    floating_lport LogicalPort
+    lrouter LogicaRouter
+}
+@enduml
