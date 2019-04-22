@@ -1,0 +1,11 @@
+@startuml  logical local bind
+Controller->PortSecApp:_add_local_port(self,lport)
+activate PortSecApp
+PortSecApp->lport:enable = port_security_enabled
+alt enable
+    PortSecApp->PortSecApp:_install_port_security_flows(lport)
+else:
+    PortSecApp->PortSecApp:_install_disable_flow(lport)
+end
+deactivate
+@enduml

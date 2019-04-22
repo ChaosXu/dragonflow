@@ -1,0 +1,22 @@
+@startuml  logical local updated
+Controller->PortSecApp:_update_local_port(self,lport,original_lport)
+activate PortSecApp
+PortSecApp->lport:enable = port_security_enabled
+PortSecApp->original_lport:original_enable = port_security_enabled
+
+alt enable
+    alt original_enable
+        PortSecApp->PortSecApp:_update_port_security_flows(lport, original_lport)
+
+    else
+        PortSecApp->PortSecApp:_install_port_security_flows(lport)
+        PortSecApp->PortSecApp:_uninstall_disable_flow(original_lport)
+    end
+else
+    alt original_enable
+        PortSecApp->PortSecApp:_install_disable_flow(lport)
+        PortSecApp->PortSecApp:_uninstall_port_security_flows(original_lport)
+    end
+end
+deactivate
+@enduml

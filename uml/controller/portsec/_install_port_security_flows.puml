@@ -1,0 +1,20 @@
+@startuml  install port security flows
+Controller->PortSecApp:_install_port_security_flows(self,lport)
+activate PortSecApp
+PortSecApp->lport:unique_key = unique_key
+
+' # install ip and mac check flows
+PortSecApp->PortSecApp:allowed_ip_mac_pairs = _get_allow_ip_mac_pairs(lport)
+loop ip_mac_pair in allowed_ip_mac_pairs
+    PortSecApp->PortSecApp:_install_flows_check_valid_ip_and_mac(unique_key, ip_mac_pair.ip_address,ip_mac_pair.mac_address)
+end
+' # install vm mac and allowed address pairs mac check flows
+PortSecApp->PortSecApp:allowed_macs = _get_allow_macs(lport)
+loop allowed_mac in allowed_macs
+    PortSecApp->PortSecApp:_install_flows_check_valid_mac(unique_key, allowed_mac)
+end
+' # install only vm mac check flows
+PortSecApp->lport:vm_mac = mac
+PortSecApp->PortSecApp:_install_flows_check_only_vm_mac(unique_key, vm_mac)
+deactivate
+@enduml

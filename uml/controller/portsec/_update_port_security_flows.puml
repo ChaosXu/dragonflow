@@ -1,0 +1,30 @@
+@startuml  updated port security flows
+Controller->PortSecApp:_update_port_security_flows(self,lport)
+activate PortSecApp
+PortSecApp->lport:unique_key = unique_key
+
+' # update ip and mac check flows
+PortSecApp->PortSecApp:added_ip_mac_pairs, removed_ip_mac_pairs = _get_added_and_removed_ip_mac_pairs(lport,original_lport)
+loop item in added_ip_mac_pairs
+    PortSecApp->PortSecApp:_install_flows_check_valid_ip_and_mac(unique_key, item.ip_address, item.mac_address)
+end
+loop item in removed_ip_mac_pairs:
+    PortSecApp->PortSecApp:_uninstall_flows_check_valid_ip_and_mac(unique_key, item.ip_address, item.mac_address)
+end
+' # update vm mac and allowed address pairs mac check flows
+PortSecApp->PortSecApp:added_valid_macs, removed_valid_macs = _get_added_and_removed_valid_macs(lport,original_lport)
+loop item in added_valid_macs:
+    PortSecApp->PortSecApp:_install_flows_check_valid_mac(unique_key, item)
+end
+loop item in removed_valid_macs:
+    PortSecApp->PortSecApp:_uninstall_flows_check_valid_mac(unique_key, item)
+end
+' # update only vm mac check flows
+PortSecApp->lport:new_vm_mac = mac
+PortSecApp->original_lport:old_vm_mac = mac
+alt new_vm_mac != old_vm_mac:
+    PortSecApp->PortSecApp:_install_flows_check_only_vm_mac(unique_key, new_vm_mac)
+    PortSecApp->PortSecApp:_uninstall_flows_check_only_vm_mac(unique_key, old_vm_mac)
+end
+deactivate
+@enduml

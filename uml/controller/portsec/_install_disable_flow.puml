@@ -1,0 +1,11 @@
+@startuml  install disable flow
+Controller->PortSecApp:_install_disable_flow(self,lport)
+activate PortSecApp
+PortSecApp->lport:unique_key = unique_key
+PortSecApp->PortSecApp:parser = parser
+
+' # Send packets to next table directly
+PortSecApp->parser:match = OFPMatch(reg6=unique_key)
+PortSecApp->DFlowApp:add_flow_go_to_table(self.states.main,const.PRIORITY_HIGH,self.exitpoints.default,match=match)
+deactivate
+@enduml

@@ -1,0 +1,11 @@
+@startuml  uninstall disable flow
+Controller->PortSecApp:_uninstall_disable_flow(self,lport)
+activate PortSecApp
+PortSecApp->lport:unique_key = unique_key
+PortSecApp->PortSecApp:parser = parser
+
+' # Send packets to next table directly
+PortSecApp->parser:match = OFPMatch(reg6=unique_key)
+PortSecApp->DFlowApp:_remove_one_port_security_flow(const.PRIORITY_HIGH, match)
+deactivate
+@enduml
