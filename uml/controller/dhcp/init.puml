@@ -1,0 +1,37 @@
+@startuml dhcp init
+Controller->DHCPApp:_init_
+activate DHCPApp
+DHCPApp->DFlowApp:_init_
+note over DHCPApp
+    self.idle_timeout = 30
+    self.hard_timeout = 0
+
+    cfg.CONF.register_opts(common_config.core_opts)
+    self.conf = cfg.CONF.df_dhcp_app
+
+    self.global_dns_list = self.conf.df_dns_servers
+    self.lease_time = cfg.CONF.dhcp_lease_duration
+    self.domain_name = cfg.CONF.dns_domain
+    self.block_hard_timeout = self.conf.df_dhcp_block_time_in_sec
+    self.default_interface_mtu = self.conf.df_default_network_device_mtu
+    self._port_rate_limiters = collections.defaultdict(
+    functools.partial(df_utils.RateLimiter,
+    max_rate=self.conf.df_dhcp_max_rate_per_sec,
+    time_unit=1))
+    self.api.register_table_handler(const.DHCP_TABLE,
+    self.packet_in_handler)
+    self._dhcp_ip_by_subnet = {}
+end note
+deactivate
+
+Controller->DHCPApp:switch_features_handler
+activate DHCPApp
+DHCPApp->DHCPApp:_install_dhcp_packet_match_flow()
+activate DHCPApp
+DHCPApp->parser:match = OFPMatch(eth_type=ether.ETH_TYPE_IP,ip_proto=n_const.PROTO_NUM_UDP,udp_src=const.DHCP_CLIENT_PORT,udp_dst=const.DHCP_SERVER_PORT)
+DHCPApp->DFlowApp:add_flow_go_to_table(SERVICES_CLASSIFICATION_TABLE,PRIORITY_MEDIUM,DHCP_TABLE, match=match)
+deactivate
+DHCPApp->DFlowApp:add_flow_go_to_table(DHCP_TABLE,PRIORITY_DEFAULT,L2_LOOKUP_TABLE)
+DHCPApp->DHCPApp:_port_rate_limiters.clear()
+deactivate
+@enduml

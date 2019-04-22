@@ -1,0 +1,18 @@
+@startuml  logical port delete
+Controller->DHCPApp:_lport_deleted(self, lport, orig_lport)
+activate DHCPApp
+alt lport.device_owner != n_const.DEVICE_OWNER_DHCP:
+    DHCPApp->DHCPApp:_delete_lport_rate_limiter(lport)
+    DHCPApp->Controller
+end
+DHCPApp->DHCPApp:_uninstall_dhcp_port_responders(lport)
+DHCPApp->DHCPApp:_remove_dhcp_network_flow(lport.lswitch)
+DHCPApp->DHCPApp:_delete_dhcp_ips_by_subnet(lport)
+activate DHCPApp
+note over DHCPApp
+    for subnet in lport.subnets:
+        del self._dhcp_ip_by_subnet[subnet.id]
+end note
+deactivate
+deactivate
+@enduml

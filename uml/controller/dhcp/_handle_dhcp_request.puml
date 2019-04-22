@@ -1,0 +1,27 @@
+@startuml  handle_dhcp_request
+Controller->DHCPApp:_handle_dhcp_request(self,packet,lport,dhcp_port)
+activate DHCPApp
+note over DHCPApp
+    dhcp_packet = packet.get_protocol(dhcp.dhcp)
+    dhcp_message_type = self._get_dhcp_message_type_opt(dhcp_packet)
+    send_packet = None
+end note
+alt dhcp_message_type == dhcp.DHCP_DISCOVER
+    DHCPApp->DHCPApp:send_packet = _create_dhcp_response(packet,dhcp_packet,dhcp.DHCP_OFFER,lport,dhcp_port)
+    activate DHCPApp
+    deactivate
+    DHCPApp->LOG:info("sending DHCP offer for port IP %(port_ip)s ""port id %(port_id)s",{'port_ip': lport.ip, 'port_id': lport.id})
+else dhcp_message_type == dhcp.DHCP_REQUEST
+    DHCPApp->DHCPApp:send_packet = _create_dhcp_response(packet,dhcp_packet,dhcp.DHCP_ACK,lport,dhcp_port)
+    DHCPApp->LOG:info("sending DHCP ACK for port IP %(port_ip)s ""port id %(tunnel_id)s",{'port_ip': lport.ip,'tunnel_id': lport.id})
+else
+    DHCPApp->LOG:error("DHCP message type %d not handled",dhcp_message_type)
+end
+alt send_packet
+    note over DHCApp
+        unique_key = lport.unique_key
+    end note
+    DHCPApp->DFlowApp:dispatch_packet(send_packet, unique_key)
+end
+deactivate
+@enduml

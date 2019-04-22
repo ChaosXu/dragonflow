@@ -6,13 +6,21 @@ class LogicalRouter {
 class LogicalRouterPort {
     mac string
     lswitch LogicalSwitch
-    network IpNetowrkField
+    network IpNetowrk
 }
 class FloatingIp {
-    floating_ip_address IpAddressField
-    fixed_ip_address IpAddressField
+    floating_ip_address IpAddress
+    fixed_ip_address IpAddress
     lport LogicalPort 
     floating_lport LogicalPort
     lrouter LogicaRouter
 }
+class HostRoute {
+    destionation IpNetwork required
+    nexthop IpAddress required
+}
+class LogicalPort {
+
+}
+LogicalRouter*-->HostRoute
 @enduml

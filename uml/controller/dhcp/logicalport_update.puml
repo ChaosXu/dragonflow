@@ -1,0 +1,20 @@
+@startuml  logical port updated
+Controller->DHCPApp:_lport_updated(self, lport, orig_lport)
+activate DHCPApp
+alt lport.device_owner != n_const.DEVICE_OWNER_DHCP
+    DHCApp-->Controller
+end
+note over DHCPApp
+    v4_ips = set(ip for ip in lport.ips if ip.version == n_const.IP_VERSION_4)
+    v4_old_ips = set(ip for ip in orig_lport.ips if ip.version == n_const.IP_VERSION_4)
+end note
+alt v4_ips != v4_old_ips or lport.mac != orig_lport.mac
+    DHCPApp->DHCPApp:_update_port_responders(lport, orig_lport)
+    activate DHCPApp
+    DHCPApp->DHCPApp:_uninstall_dhcp_port_responders(orig_lport)
+    DHCPApp->DHCPApp:_install_dhcp_port_responders(lport)
+    deactivate
+end
+DHCPApp->DHCPApp:_update_dhcp_ips_by_subnet(lport, orig_lport)
+deactivate
+@enduml

@@ -1,0 +1,33 @@
+@startuml  logical port created
+Controller->DHCPApp:_lport_created(self,lport)
+activate DHCPApp
+alt lport.device_owner != n_const.DEVICE_OWNER_DHCP:
+    DHCPApp-->Controller
+end
+DHCPApp->DHCPApp:_install_dhcp_port_responders(lport)
+activate DHCPApp
+loop ip in lport.ips_v4
+    DHCPApp->icmp_responder:ICMPResponder(app=self,network_id=lport.lswitch.unique_key,interface_ip=lport.ip,table_id=const.L2_LOOKUP_TABLE).add()
+    DHCPApp->arp_responder:ArpResponder(app=self,network_id=lport.lswitch.unique_key,interface_ip=ip,interface_mac=lport.mac).add()
+end
+deactivate
+DHCPApp->DHCPApp:_install_dhcp_port_flow(lport.lswitch)
+activate DHCPApp
+note over DHCPApp
+    parser = self.parser
+    ofproto = self.ofproto
+    match = parser.OFPMatch(metadata=lswitch.unique_key)
+    actions = [parser.OFPActionOutput(ofproto.OFPP_CONTROLLER,ofproto.OFPCML_NO_BUFFER)]
+    inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,actions)]
+end note
+DHCPApp->DFlowApp:mod_flow(inst=inst,table_id=const.DHCP_TABLE,priority=const.PRIORITY_MEDIUM,match=match)
+deactivate
+DHCPApp->DHCPApp:_add_dhcp_ips_by_subnet(lport)
+activate DHCPApp
+note over DHCPApp
+    subnet_ids = (subnet.id for subnet in lport.subnets)
+    self._dhcp_ip_by_subnet.update(dict(zip(subnet_ids, lport.ips)))
+end note
+deactivate
+deactivate
+@enduml

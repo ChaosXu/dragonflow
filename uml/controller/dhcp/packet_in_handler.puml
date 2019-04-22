@@ -1,0 +1,38 @@
+@startuml  packet in
+Controller->DHCPApp:packet_in(self,event)
+activate DHCPApp
+note over DHCPApp
+    msg = event.msg
+    pkt = os_ken_packet.Packet(msg.data)
+    pkt_ip = pkt.get_protocol(ipv4.ipv4)
+end note
+alt not pkt_ip
+    DHCPApp->LOG:error("No support for non IPv4 protocol")
+    DHCPApp->Controller
+end
+note over DHCPApp
+unique_key = msg.match.get('reg6')
+lport = self.db_store.get_one(l2.LogicalPort(unique_key=unique_key),index=l2.LogicalPort.get_index('unique_key'))
+network_key = msg.match.get('metadata')
+end note
+DHCPApp->DHCPApp:dhcp_lport = _get_dhcp_port_by_network(network_key)
+alt not dhcp_lport
+    DHCPApp->LOG:error("No DHCP port for network {}".format(str(network_key)))
+    DHCPApp->Controller
+end
+alt self._check_port_limit(lport):
+    DHCPApp->DHCPApp:_block_port_dhcp_traffic(unique_key, lport)
+    DHCPApp->LOG:warning("pass rate limit for %(port_id)s blocking DHCP ","traffic for %(time)s sec",{'port_id': lport.id,'time': self.block_hard_timeout})
+    DHCPApp->Controller
+end
+alt not self.db_store.get_one(lport):
+    DHCPApp->LOG:error("Port %s no longer found.", lport.id)
+    DHCPApp->Controller
+end
+alt try
+    DHCPApp->DHCPApp:_handle_dhcp_request(pkt, lport, dhcp_lport)
+else except Exception
+    DHCPApp->LOG:exception("Unable to handle packet %s", msg)
+end
+deactivate
+@enduml
