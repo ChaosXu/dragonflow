@@ -1,0 +1,27 @@
+@startuml intall local floatingip
+DNATApp->DNATApp:_install_local_floatingip(floatingip)
+activate DNATApp
+alt self._get_external_cidr(floatingip).version != n_const.IP_VERSION_4
+    DNATApp-->DNATApp
+end
+DNATApp->DNATApp:_install_ingress_nat_flows(floatingip)
+activate DNATApp
+DNATApp->DNATApp:_get_arp_responder(floatingip).add()
+DNATApp->DNATApp:_install_source_port_detector(floatingip)
+DNATApp->DNATApp:_install_ingress_capture_flow(floatingip)
+DNATApp->DNATApp:_install_ingress_translate_flow(floatingip)
+DNATApp->DNATApp:_install_ingress_icmp_flows(floatingip)
+deactivate
+DNATApp->DNATApp:_install_egress_nat_rules(floatingip)
+activate DNATApp
+DNATApp->DNATApp:_install_egress_capture_flow(floatingip)
+DNATApp->DNATApp:_install_egress_translate_flow(floatingip)
+DNATApp->DNATApp:_install_egress_icmp_flows(floatingip)
+deactivate
+
+note over DNATApp
+    port_locator.copy_port_binding(floatingip.floating_lport,floatingip.lport)
+    floatingip.floating_lport.emit_bind_local()
+end note
+deactivate
+@enduml

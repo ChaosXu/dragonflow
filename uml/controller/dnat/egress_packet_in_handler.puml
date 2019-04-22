@@ -1,0 +1,10 @@
+@startuml egress packet in handler
+Controller->DNATAPP:egress_packet_in_handler(self,event)
+activate DNATApp
+alt event.msg.reason == self.ofproto.OFPR_INVALID_TTL:
+    DNATApp->DNATApp:_handle_egress_invalid_ttl(event)
+else
+    DNATApp->DNATApp:_handle_egress_icmp_translate(event)
+end
+deactivate
+@enduml

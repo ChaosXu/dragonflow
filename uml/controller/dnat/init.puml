@@ -1,0 +1,18 @@
+@startuml dnat init
+Controller->DNATApp:_init_
+activate DNATApp
+DNATApp->DFlowApp:_init_
+note over DNATApp
+    self.conf = cfg.CONF.df_dnat_app
+    # Map between fixed ip mac to floating ip
+    self.egress_ttl_invalid_handler_rate_limit = df_utils.RateLimiter(
+    max_rate=self.conf.dnat_ttl_invalid_max_rate,time_unit=1)
+    self.ingress_ttl_invalid_handler_rate_limit = df_utils.RateLimiter(max_rate=self.conf.dnat_ttl_invalid_max_rate,time_unit=1)
+    self.egress_icmp_error_rate_limit = df_utils.RateLimiter(max_rate=self.conf.dnat_icmp_error_max_rate,time_unit=1)
+    self.ingress_icmp_error_rate_limit = df_utils.RateLimiter(max_rate=self.conf.dnat_icmp_error_max_rate,time_unit=1)
+    self.api.register_table_handler(const.INGRESS_DNAT_TABLE,self.ingress_packet_in_handler)
+    self.api.register_table_handler(const.EGRESS_DNAT_TABLE,self.egress_packet_in_handler)
+    self.lports_in_process = set()
+end note
+deactivate
+@enduml

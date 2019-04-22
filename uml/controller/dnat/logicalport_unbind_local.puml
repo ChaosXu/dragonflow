@@ -1,0 +1,15 @@
+@startuml logical port unbound
+Controller->DNATApp:_local_port_unbound(self,lport)
+activate DNATApp
+' # In case the port is flagged as in process, remove flag and ignore
+alt self._pop_in_process(lport.id):
+    DNAT-->DNAT:
+end
+loop floatingip in self._get_floatingips_by_lport(lport):
+    DNAT->DNAT:_uninstall_local_floatingip(floatingip)
+end
+loop floatingip in self._get_floatingips_by_floating_lport(lport):
+    DNAT->DNAT:_uninstall_local_floatingip(floatingip, emit_unbind=False)
+end
+deactivate
+@enduml

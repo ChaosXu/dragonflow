@@ -1,0 +1,29 @@
+
+@startuml floating ip deleted
+Controller->DNATApp:_delete_floatingip(self,floatingip)
+activate DNATApp
+alt floatingip.lport is None:
+    DNATApp-->DNATApp:
+end
+'  FIXME lport in self.db_store
+alt floatingip.floating_lport.get_object() is None:
+    DNATApp-->DNATApp:
+end
+DNATApp->DNATApp:_uninstall_floatingip(floatingip)
+activate DNATApp
+' # In case the VM was deleted, the nova port is removed. (Actually the
+'         # floating port was also uninstalled), we should just return in that
+'         # case.
+
+' # FIXME lport in self.db_store
+alt floatingip.lport.get_object() is None:
+    DNATApp-->DNATApp:
+end
+alt floatingip.lport.is_local:
+    DNATApp->DNATApp:_uninstall_local_floatingip(floatingip)
+else floatingip.lport.is_remote:
+    DNATApp->DNATApp:_uninstall_remote_floatingip(floatingip)
+end
+deactivate
+deactivate
+@enduml

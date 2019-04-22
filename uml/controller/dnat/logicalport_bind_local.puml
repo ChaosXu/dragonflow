@@ -1,0 +1,9 @@
+
+@startuml logical port bound
+Controller->DNATApp:_local_port_bound(self,lport)
+activate DNATApp
+loop floatingip in self._get_floatingips_by_lport(lport):
+    DNATApp->DNATApp:_install_local_floatingip(floatingip)
+end
+deactivate
+@enduml

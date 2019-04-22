@@ -1,0 +1,15 @@
+@startuml floating ip created
+Controller->DNATApp:_create_floatingip(self,floatingip)
+activate DNATApp
+loop floatingip.lport is not None:
+    DNATApp->DNATApp:_install_floatingip(floatingip)
+    activate DNATApp
+    alt floatingip.lport.is_local:
+        DNATApp->DNATApp:_install_local_floatingip(floatingip)
+    else floatingip.lport.is_remote:
+        DNATApp->DNATApp:_install_remote_floatingip(floatingip)
+    end
+    deactivate
+end
+deactivate
+@enduml

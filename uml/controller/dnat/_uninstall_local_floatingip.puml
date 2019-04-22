@@ -1,0 +1,23 @@
+@startuml unintall local floatingip
+DNATApp->DNATApp:_uninstall_local_floatingip(floatingip)
+activate DNATApp
+alt self._get_external_cidr(floatingip).version != n_const.IP_VERSION_4
+    DNATApp-->DNATApp
+end
+DNATApp->DNATApp:_uninstall_floatingip_common(floatingip, emit_unbind)
+DNATApp->DNATApp:_remove_ingress_nat_rules(floatingip)
+activate DNATApp
+DNATApp->DNATApp:_get_arp_responder(floatingip).remove()
+DNATApp->DNATApp:_uninstall_ingress_capture_flow(floatingip)
+DNATApp->DNATApp:_uninstall_ingress_translate_flow(floatingip)
+DNATApp->DNATApp:_uninstall_ingress_icmp_flows(floatingip)
+DNATApp->DNATApp:_uninstall_source_port_detector(floatingip)
+deactivate
+DNATApp->DNATApp:_remove_egress_nat_rules(floatingip)
+activate DNATApp
+DNATApp->DNATApp:_uninstall_egress_capture_flow(floatingip)
+DNATApp->DNATApp:_uninstall_egress_translate_flow(floatingip)
+DNATApp->DNATApp:_uninstall_egress_icmp_flows(floatingip)
+deactivate
+deactivate
+@enduml

@@ -1,0 +1,20 @@
+@startuml floating ip updated
+Controller->DNATApp:_update_floatingip(self,floatingip)
+activate DNATApp
+alt orig_floatingip.lport == floatingip.lport:
+    DNATApp-->DNATApp:
+end
+alt orig_floatingip.lport is not None
+    note over DNATApp
+        # Update here only if we're disassociating
+    end note
+    DNATApp->DNATApp:_uninstall_floatingip(orig_floatingip)
+end
+alt floatingip.lport is not None
+    note over DNATApp
+        # Update here only if we're associating
+    end note
+    DNATApp->DNATApp:_install_floatingip(floatingip)
+end
+deactivate
+@enduml

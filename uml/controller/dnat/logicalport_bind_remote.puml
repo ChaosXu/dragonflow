@@ -1,0 +1,8 @@
+@startuml remote port bound
+Controller->DNATApp:_remote_port_bound(self,lport)
+activate DNATApp
+loop floatingip in self._get_floatingips_by_lport(lport)
+    DNATApp->DNATApp:_install_remote_floatingip(floatingip)
+end
+deactivate
+@enduml
