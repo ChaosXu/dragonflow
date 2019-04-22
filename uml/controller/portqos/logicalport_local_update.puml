@@ -1,0 +1,13 @@
+@startuml  logical port updated
+Controller->PortQosApp:_update_local_port(self,lport,original_lport)
+activate PortQosApp
+alt (original_lport and lport.qos_policy == original_lport.qos_policy)
+    ' # Do nothing, if the port's qos is the same as db store.
+    PortQosApp-->PortQosApp:
+end
+alt original_lport.qos_policy
+    PortQosApp->PortQosApp:_local_ports[original_lport.qos_policy.id].discard(lport.id)
+end
+PortQosApp->PortQosApp:_check_update_local_port_qos(lport)
+deactivate
+@enduml

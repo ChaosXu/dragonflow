@@ -1,0 +1,6 @@
+@startuml  logical port bind
+Controller->PortQosApp:_add_local_port(self,lport)
+activate PortQosApp
+ PortQosApp->PortQosApp:_check_update_local_port_qos(lport)
+deactivate
+@enduml

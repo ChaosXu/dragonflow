@@ -1,0 +1,12 @@
+@startuml  logical port unbind
+Controller->PortQosApp:_remove_local_port(self,lport)
+activate PortQosApp
+alt lport.qos_policy
+    PortQosApp->PortQosApp:_local_ports[lport.qos_policy.id].discard(lport.id)
+end
+' # If removing lport in nb db, the qos in ovs db should also be checked
+' # and cleared. This is because the ovs db might not be consistent with
+' # nb db.
+PortQosApp->PortQosApp:vswitch_api.delete_port_qos_and_queue(lport.id)
+deactivate
+@enduml

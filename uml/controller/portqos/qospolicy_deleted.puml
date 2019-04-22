@@ -1,0 +1,9 @@
+@startuml  quspolicy deleted
+Controller->PortQosApp:delete_qos_policy(self,policy)
+activate PortQosApp
+PortQosApp->PortQosApp:ports = _local_ports.pop(policy.id, ())
+loop port_id in ports
+    PortQosApp->PortQosApp:vswitch_api.clear_port_qos(port_id)
+end
+deactivate
+@enduml

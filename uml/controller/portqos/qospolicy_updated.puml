@@ -1,0 +1,8 @@
+@startuml  quspolicy updated
+Controller->PortQosApp:update_qos_policy(self,policy,orig_policy=None)
+activate PortQosApp
+loop port_id in self._local_ports[policy.id]
+    PortQosApp->PortQosApp:_update_local_port_qos(port_id, policy)
+end
+deactivate
+@enduml
