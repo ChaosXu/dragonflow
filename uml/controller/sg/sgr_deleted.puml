@@ -1,0 +1,32 @@
+@startuml security gourp rule deleted
+Controller->SGApp:add_security_group_rule(self,ecgroup, secgroup_rule)
+activate SGApp
+note over SGApp
+    secgroup_id = secgroup.id
+end note
+alt self._is_sg_not_associated_with_local_port(secgroup_id):
+    SGApp->LOG:debug("Security group %s wasn't associated with a local port",secgroup_id)
+    SGApp-->SGApp:
+end
+SGApp->LOG:info("Remove a rule %(rule)s to security group %(secgroup)s",{'rule': secgroup_rule, 'secgroup': secgroup.id})
+
+SGApp->SGApp:conj_id, priority = _get_secgroup_conj_id_and_priority(secgroup.id)
+
+' # update the record of rules each of which specifies a same security
+' # group as its parameter of remote group.
+SGApp->secgroup_rule:remote_group_id = remote_group_id
+alt remote_group_id is not None:
+    SGApp->SGApp:associate_rules = remote_secgroup_ref.get(remote_group_id)
+    alt associate_rules is not None:
+        SGApp->associate_rules:del secgroup_rule.id
+        alt len(associate_rules) == 0:
+            SGApp->SGApp:del remote_secgroup_ref[remote_group_id]
+        end
+    end
+end
+SGApp->SGApp:_uninstall_security_group_rule_flows(secgroup_rule)
+
+' # delete conntrack entities by rule
+SGApp->SGApp:_delete_conntrack_entries_by_rule(secgroup_rule)
+deactivate
+@enduml

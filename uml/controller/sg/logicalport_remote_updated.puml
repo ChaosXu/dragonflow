@@ -1,0 +1,19 @@
+@startuml logical port remote updated
+Controller->SGApp:_update_remote_port(self,lport,original_lport)
+activate SGApp
+note over SGAPP
+    secgroups = lport.security_groups
+    original_secgroups = original_lport.security_groups
+    added_secgroups, removed_secgroups, unchanged_secgroups = self._get_added_and_removed_and_unchanged_secgroups(secgroups, original_secgroups)
+end note
+loop secgroup in added_secgroups
+    SGAPP->SGAPP:_add_remote_port_associating(lport, secgroup.id)
+end
+loop secgroup in removed_secgroups
+    SGAPP->SGAPP:_remove_remote_port_associating(lport, secgroup.id)
+end
+loop secgroup in unchanged_secgroups
+    SGAPP->SGAPP:_update_port_addresses_process(lport, original_lport,secgroup.id)
+end
+deactivate
+@enduml

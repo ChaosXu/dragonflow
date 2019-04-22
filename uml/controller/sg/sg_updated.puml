@@ -1,0 +1,19 @@
+@startuml security gourp updated
+Controller->SGApp:update_security_group(self,new_secgroup,old_secgroup)
+activate SGApp
+note over SGApp
+    new_secgroup_rules = copy.copy(new_secgroup.rules)
+    old_secgroup_rules = copy.copy(old_secgroup.rules)
+end note
+loop new_rule in new_secgroup_rules
+    alt new_rule not in old_secgroup_rules
+        SGApp->SGApp:add_security_group_rule(new_secgroup, new_rule)
+    else
+        SGApp->old_secgroup_rules:remove(new_rule)
+    end
+end
+loop old_rule in old_secgroup_rules
+    SGApp->SGApp"remove_security_group_rule(old_secgroup, old_rule)
+end
+deactivate
+@enduml

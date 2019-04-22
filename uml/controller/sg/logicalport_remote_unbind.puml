@@ -1,0 +1,14 @@
+@startuml logical port unbind remote
+Controller->SGApp:_remove_remote_port(self,lport)
+activate SGApp
+secgroups = lport.security_groups
+alt not secgroups:
+    SGApp-->SGApp:
+end
+' # uninstall ct table
+SGApp->SGApp:_uninstall_connection_track_flows(lport)
+loop secgroup in secgroups:
+    SGApp->SGApp:_remove_remote_port_associating(lport, secgroup.id)
+end
+deactivate
+@enduml

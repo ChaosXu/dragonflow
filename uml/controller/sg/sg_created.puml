@@ -1,0 +1,8 @@
+@startuml security gourp  created
+Controller->SGApp:add_security_group(self,lport,original_lport)
+activate SGApp
+loop new_rule in secgroup.rules:
+    SGApp->SGApp:add_security_group_rule(secgroup, new_rule)
+end
+deactivate
+@enduml

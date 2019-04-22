@@ -1,0 +1,15 @@
+@startuml init sg app
+Controller->SGApp:_init_
+activate SGApp
+note over SGApp
+    super(SGApp, self).__init__(*args, **kwargs)
+    self.secgroup_rule_mappings = {}
+    self.next_secgroup_rule_id = 0
+    self.remote_secgroup_ref = {}
+    self.secgroup_associate_local_ports = {}
+    self.secgroup_aggregate_addresses = collections.defaultdict(netaddr.IPSet)
+    self.secgroup_ip_refs = collections.defaultdict(set)
+    self.register_local_cookie_bits(COOKIE_NAME, 32)
+end note
+deactivate
+@enduml

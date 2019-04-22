@@ -1,0 +1,28 @@
+@startuml security gourp rule created
+Controller->SGApp:add_security_group_rule(self,ecgroup, secgroup_rule)
+activate SGApp
+note over SGApp
+    secgroup_id = secgroup.id
+end note
+alt self._is_sg_not_associated_with_local_port(secgroup_id)
+    SGApp->LOG:debug("Security group %s wasn't associated with a local port",secgroup_id)
+    SGApp-->SGApp:
+end
+SGApp->LOG:info("Add a rule %(rule)s to security group %(secgroup)s",{'rule': secgroup_rule, 'secgroup': secgroup_id})
+
+' # update the record of rules each of which specifies a same security
+' #  group as its parameter of remote group.
+note over SGApp
+    remote_group_id = secgroup_rule.remote_group_id
+end note
+alt remote_group_id is not None
+    SGApp->SGApp:associate_rules = remote_secgroup_ref.get(remote_group_id)
+    alt associate_rules is None
+        SGApp->SGApp:remote_secgroup_ref[remote_group_id] = {secgroup_rule.id: secgroup_rule}
+    else
+        SGApp->associate_rules:[secgroup_rule.id] = secgroup_rule
+    end
+end
+SGApp->SGApp:_install_security_group_rule_flows(secgroup_id, secgroup_rule)
+deactivate
+@enduml

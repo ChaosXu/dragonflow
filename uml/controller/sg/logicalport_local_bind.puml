@@ -1,0 +1,16 @@
+@startuml logical port local bind
+Controller->SGApp:_add_local_port(self,lport)
+activate SGApp
+note over SGApp
+    secgroups = lport.security_groups
+end note
+alt not secgroups
+    SGApp-->SGApp
+end
+loop secgroup in secgroups:
+    SGApp->SGApp:_add_local_port_associating(lport, secgroup.id)
+end
+' # install ct table
+SGApp->SGApp:_install_connection_track_flows(lport)
+deactivate
+@enduml
