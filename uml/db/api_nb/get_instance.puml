@@ -1,0 +1,22 @@
+@startuml get_instance
+MechDriver->NbApi:get_instance()
+activate NbApi
+alt _nb_api is None:
+    NbApi->df_utils:nb_driver = load_driver(cfg.CONF.df.nb_db_class,df_utils.DF_NB_DB_DRIVER_NAMESPACE)
+    NbApi->NbApi:nb_api = NbApi(nb_driver)
+    NbApi->NbApi:_initialize(db_ipdb_port)
+    activate NbApi
+    NbApi->NbApi:driver.initialize(db_ip, db_port, config=cfg.CONF.df)
+    alt self.use_pubsub
+        NbApi->NbApi:self.publisher = _get_publisher()
+        NbApi->NbApi:self.subscriber = _get_subscriber()
+        NbApi->publisher:initialize()
+        ' # Start a thread to detect DB failover in Plugin
+        NbApi->publisher:set_publisher_for_failover(self.publisher,self.db_recover_callback)
+        NbApi->publisher:start_detect_for_failover()
+    end
+    deactivate
+    NbApi-->NbApi:nb_api
+end
+deactivate
+@enduml
