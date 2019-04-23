@@ -1,0 +1,28 @@
+@startuml init tunnel
+Controller->TunnelingApp:_init_
+activate TunnelingApp
+note over TunnelingApp
+    super(TunnelingApp, self).__init__(*args, **kwargs)
+    self.tunnel_types = cfg.CONF.df.tunnel_types
+    self.local_networks = logical_networks.LogicalNetworks()
+end note
+deactivate
+
+Controller->TunnelingApp:switch_features_handler(self,ev)
+activate TunnelingApp
+TunnelingApp->TunnelingApp:_create_tunnels
+activate TunnelingApp
+TunnelingApp->TunnelingApp:tunnel_ports = vswitch_api.get_virtual_tunnel_ports()
+loop tunnel_port in tunnel_ports
+    alt tunnel_port.tunnel_type not in self.tunnel_types
+        TunnelingApp->vswitch_api:delete_port(tunnel_port)
+    end
+end
+loop t in self.tunnel_types
+    ' # The customized ovs idl will ingore the command if the port
+    ' # already exists.
+    TunnelingApp->vswitch_api:add_virtual_tunnel_port(t)
+end
+deactivate
+deactivate
+@enduml

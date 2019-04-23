@@ -1,0 +1,15 @@
+@startuml logicalport remote unbind
+Controller->TunnelingApp:_add_remote_port(self,lport)
+activate TunnelingApp
+TunnelingApp->lport:lswitch = lswitch
+TunnelingApp->lswitch:network_type = network_type
+alt network_type not in self.tunnel_types
+    TunnelingApp-->TunnelingApp
+end
+TunnelingApp->TunnelingApp:_remove_egress_dispatch_flow(lport)
+TunnelingApp->lswitch:network_id = unique_key
+TunnelingApp->lswitch:segmentation_id = segmentation_id
+TunnelingApp->TunnelingApp:local_networks.remove_remote_port(port_id=lport.id,network_id=network_id,network_type=network_type)
+TunnelingApp->TunnelingApp:_modify_egress_bum_flow(network_id,network_type,segmentation_id,self.ofproto.OFPFC_MODIFY)
+deactivate
+@endstart
