@@ -1,0 +1,90 @@
+@startuml init metadata service
+Controller->MetadataServiceApp:_init_
+activate MetadataServiceApp
+note over MetadataServiceApp
+    super(MetadataServiceApp, self).__init__(*args, **kwargs)
+    self._arp_responder = None
+    self._port_num = None
+    self._interface_mac = ""
+    self._ip = cfg.CONF.df_metadata.ip
+    self._port = cfg.CONF.df_metadata.port
+    self._interface = cfg.CONF.df_metadata.metadata_interface
+end note
+deactivate
+
+Controller->MetadataServiceApp:switch_features_handler(self,ev)
+activate MetadataServiceApp
+alt self._interface_mac and self._port_num and self._port_num > 0:
+    ' # For reconnection, if the mac and port_num is set, re-download
+    ' # the flows.
+    MetadataServiceApp->MetadataServiceApp:_add_tap_metadata_port(self._port_num, self._interface_mac)
+    activate MetadataServiceApp
+    note over MetadataServiceApp
+        Add the flows that can be added with the current available information:
+        Regular Client->Server packets have IP rewritten, and sent to OVS port
+        TCP Syn packets are sent to controller, so that response flows can be
+        added.
+        Packets from the OVS port are detected and sent for classification.
+    end note
+    MetadataServiceApp->MetadataServiceApp:_port_num = port_num
+    MetadataServiceApp->MetadataServiceApp:ofproto = ofproto
+    MetadataServiceApp->MetadataServiceApp:parser = parser
+    MetadataServiceApp->MetadataServiceApp:_add_incoming_flows()
+    note over MetadataServiceApp
+        ' # Regular packet
+        match = parser.OFPMatch(eth_type=ethernet.ether.ETH_TYPE_IP)
+        actions = self._get_rewrite_ip_and_output_actions(ofproto, parser)
+        inst = [parser.OFPInstructionActions(
+        ofproto.OFPIT_APPLY_ACTIONS,
+        actions,
+        )]
+    end note
+    MetadataServiceApp->DFlowApp:mod_flow(table_id=const.METADATA_SERVICE_TABLE,command=ofproto.OFPFC_ADD,priority=const.PRIORITY_MEDIUM,match=match,inst=inst)
+    note over MetadataServiceApp
+        # TCP SYN packet
+        match = parser.OFPMatch(
+        eth_type=ethernet.ether.ETH_TYPE_IP,
+        ip_proto=ipv4.inet.IPPROTO_TCP,
+        tcp_flags=(TCP_SYN, TCP_SYN | TCP_ACK),
+        )
+        learn_actions = self._get_learn_actions(ofproto, parser)
+        learn_actions.extend(actions)
+        inst = [parser.OFPInstructionActions(
+        ofproto.OFPIT_APPLY_ACTIONS,
+        learn_actions,
+        )]
+    end note
+    MetadataServiceApp->DFlowApp:mod_flow(table_id=const.METADATA_SERVICE_TABLE,command=ofproto.OFPFC_ADD,priority=const.PRIORITY_HIGH,match=match,inst=inst)
+
+    note over MetadataServiceApp
+        # ARP responder
+        match = parser.OFPMatch(in_port=port_num,
+        eth_type=ethernet.ether.ETH_TYPE_ARP)
+        actions = [
+        parser.NXActionResubmitTable(
+        table_id=const.METADATA_SERVICE_REPLY_TABLE),
+        parser.OFPActionOutput(ofproto.OFPP_IN_PORT, 0)]
+        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
+        actions)]
+    end note
+    MetadataServiceApp->DFlowApp:mod_flow(table_id=const.INGRESS_CLASSIFICATION_DISPATCH_TABLE,command=ofproto.OFPFC_ADD,priority=const.PRIORITY_MEDIUM,match=match,inst=inst,)
+    MetadataServiceApp->MetadataServiceApp:_create_arp_responder(mac)
+
+    note over MetadataServiceApp
+        # Response packet
+        match = parser.OFPMatch(in_port=port_num,
+        eth_type=ethernet.ether.ETH_TYPE_IP)
+        actions = [
+        parser.NXActionResubmitTable(
+        table_id=const.METADATA_SERVICE_REPLY_TABLE),
+        parser.NXActionResubmitTable(
+        table_id=const.INGRESS_DISPATCH_TABLE)
+        ]
+        inst = [parser.OFPInstructionActions(ofproto.OFPIT_APPLY_ACTIONS,
+        actions)]
+    end note
+    MetadataServiceApp->DFlowApp:mod_flow(table_id=const.INGRESS_CLASSIFICATION_DISPATCH_TABLE,command=ofproto.OFPFC_ADD,priority=const.PRIORITY_MEDIUM,match=match,inst=inst)
+    deactivate
+end
+deactivate
+@enduml

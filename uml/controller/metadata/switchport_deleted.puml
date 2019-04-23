@@ -1,0 +1,19 @@
+@startuml switch port delete
+Controller->MetadataServiceApp:switch_port_deleted(self,switch_port,orig_switch_port=None)
+activate MetadataServiceApp
+alt switch_port.name != cfg.CONF.df_metadata.metadata_interface:
+    MetadataServiceApp-->MetadataServiceApp
+end
+MetadataServiceApp->MetadataServiceApp:_remove_metadata_interface_flows()
+activate MetadataServiceApp
+alt not self._port_num
+    MetadataServiceApp-->MetadataServiceApp:
+end
+MetadataServiceApp->MetadataServiceApp:parser = parser
+MetadataServiceApp->MetadataServiceApp:ofproto = ofproto
+MetadataServiceApp->MetadataServiceApp:mod_flow(table_id=const.INGRESS_CLASSIFICATION_DISPATCH_TABLE,command=ofproto.OFPFC_DELETE,priority=const.PRIORITY_MEDIUM,match=parser.OFPMatch(in_port=self._port_num))
+MetadataServiceApp->MetadataServiceApp:_port_num = None
+MetadataServiceApp->MetadataServiceApp:_interface_mac = ""
+deactivate
+deactivate
+@enduml

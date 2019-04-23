@@ -1,0 +1,22 @@
+@startuml switch port created or updated
+Controller->MetadataServiceApp:switch_port_updated(self,switch_port,orig_switch_port=None)
+activate MetadataServiceApp
+alt switch_port.name != cfg.CONF.df_metadata.metadata_interface:
+    MetadataServiceApp-->MetadataServiceApp
+end
+MetadataServiceApp->switch_port:port_num = .port_num
+MetadataServiceApp->switch_port:mac = mac_in_use
+alt not port_num or not mac
+    MetadataServiceApp-->MetadataServiceApp
+end
+alt port_num <= 0
+    MetadataServiceApp-->MetadataServiceApp
+end
+alt port_num == self._port_num and mac == self._interface_mac
+    MetadataServiceApp-->MetadataServiceApp
+end
+MetadataServiceApp-->MetadataServiceApp:_add_tap_metadata_port(port_num, mac)
+MetadataServiceApp-->MetadataServiceApp:_port_num = port_num
+MetadataServiceApp-->MetadataServiceApp:_interface_mac = mac
+deactivate
+@enduml
