@@ -1,0 +1,26 @@
+@startuml delete obj
+MechDriver->NbApi:delete(self,obj,skip_send_event=False)
+activate NbApi
+note over NbApi
+    Delete the provided object from the database and publish the event
+    about its deletion.
+
+    The provided object does not have to have all the fields filled,
+    just the ID / topic (if applicable) of the object we wish to delete.
+
+end note
+NbApi->type:model = type(obj)
+NbApi->obj:on_delete_pre()
+NbApi->api_nb:topic = _get_topic(obj)
+alt
+    NbApi->NbApi:driver.delete_key(model.table_name, obj.id, topic)
+else except df_exceptions.DBKeyNotFound
+    alt with excutils.save_and_reraise_exception()
+        NbApi->LOG:debug('Could not find object %(id)s to delete in %(table)s',{'id': obj.id, 'table': model.table_name})
+    end
+end
+alt not skip_send_event
+    NbApi->NbApi:_send_db_change_event(model.table_name, obj.id, 'delete',None, topic)
+end
+deactivate
+@enduml

@@ -1,0 +1,15 @@
+@startuml get all
+MechDriver->NbApi:get_all(self,model,topic=None)
+activate NbApi
+note over NbApi
+    """Get all instances of provided model, can be limited to instances
+    with a specific topic.
+    """
+end note
+NbApi->NbApi:all_values = driver.get_all_entries(model.table_name, topic)
+note over NbApi
+    all_objects = [model.from_json(e) for e in all_values]
+end note
+NbApi-->MechDriver:model.on_get_all_post(all_objects)
+deactivate
+@enduml

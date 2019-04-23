@@ -1,0 +1,33 @@
+@startuml udpate obj
+MechDriver->NbApi:update(self,obj,skip_send_event=False)
+activate NbApi
+note over NbApi
+    Update the provided object in the database and publish an event
+    about the change.
+
+    This method reads the existing object from the database and updates
+    any non-empty fields of the provided object. Retrieval happens by
+    id/topic fields.
+end note
+NbApi->type:model = type(obj)
+NbApi->NbApi: full_obj = get(obj)
+NbApi->copy:db_obj = copy(full_obj)
+
+alt full_obj is None
+    NbApi->df_exceptions:raise DBKeyNotFound(key=obj.id)
+end
+NbApi->full_obj:changed_fields = update(obj)
+
+alt not changed_fields
+    NbApi-->MechDriver
+end
+NbApi->full_obj:on_update_pre(db_obj)
+NbApi->full_obj:serialized_obj = to_json()
+NbApi->api_nb:topic = _get_topic(full_obj)
+
+NbApi->NbApi:driver.set_key(model.table_name, full_obj.id,serialized_obj, topic)
+alt not skip_send_event
+    NbApi->NbApi:_send_db_change_event(model.table_name, full_obj.id, 'set',serialized_obj, topic)
+end
+deactivate
+@enduml

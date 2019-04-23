@@ -1,0 +1,24 @@
+@startuml get obj
+MechDriver->NbApi:get(self,lean_obj)
+activate NbApi
+note over NbApi
+    Retrieve a model instance from the database. This function uses
+    lean_obj to deduce ID and model type
+    >>> nb_api.get(Chassis(id="one"))
+    Chassis(id="One", ip="192.168.121.22", tunnel_types=["vxlan"])
+end note
+alt mproxy.is_model_proxy(lean_obj)
+    NbApi->lean_obj:lean_obj = get_proxied_model()(id=lean_obj.id)
+end
+NbApi->type:model = type(lean_obj)
+alt
+    NbApi->NbApi:serialized_obj = driver.get_key(model.table_name,lean_obj.id,_get_topic(lean_obj))
+else df_exceptions.DBKeyNotFound
+    NbApi->traceback:exception_tb = format_exc()
+    NbApi->LOG:debug('Could not get object %(id)s from table %(table)s',{'id': lean_obj.id, 'table': model.table_name})
+    NbApi->LOG:debug('%s', (exception_tb,))
+else
+    NbApi->MechDriver: model.from_json(serialized_obj)
+end
+deactivate
+@enduml

@@ -1,0 +1,18 @@
+@startuml create obj
+MechDriver->NbApi:create(self,obj,skip_send_event=False)
+activate NbApi
+note over NbApi
+    """Create the provided object in the database and publish an event
+    about its creation.
+    """
+end note
+NbApi->type:model = type(obj)
+NbApi->obj:on_create_pre()
+NbApi->obj:serialized_obj = to_json()
+NbApi->api_nb:topic = _get_topic(obj)
+NbApi->NbApi:driver.create_key(model.table_name, obj.id,serialized_obj, topic)
+alt not skip_send_event
+    NbApi->NbApi:_send_db_change_event(model.table_name, obj.id, 'create',serialized_obj, topic)
+end
+deactivate
+@enduml
