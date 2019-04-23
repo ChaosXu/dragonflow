@@ -1,0 +1,13 @@
+@startuml send db change event
+NbApi->NbApi:_send_db_change_event(self,table, key, action, value, topic):
+activate NbApi
+alt not self.use_pubsub
+    NbApi-->NbApi
+end
+alt not self.enable_selective_topo_dist or topic is None:
+    NbApi->db_common:topic = SEND_ALL_TOPIC
+end
+NbApi->db_common:update = DbUpdate(table, key, action, value, topic=topic)
+NbApi->publisher:send_event(update)
+deactivate
+@enduml

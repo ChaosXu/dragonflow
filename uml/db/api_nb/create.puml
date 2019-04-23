@@ -10,6 +10,12 @@ NbApi->type:model = type(obj)
 NbApi->obj:on_create_pre()
 NbApi->obj:serialized_obj = to_json()
 NbApi->api_nb:topic = _get_topic(obj)
+activate api_nb
+note over api_nb
+    getattr(obj, 'topic', None)
+end note
+api_nb-->NbApi
+deactivate
 NbApi->NbApi:driver.create_key(model.table_name, obj.id,serialized_obj, topic)
 alt not skip_send_event
     NbApi->NbApi:_send_db_change_event(model.table_name, obj.id, 'create',serialized_obj, topic)
