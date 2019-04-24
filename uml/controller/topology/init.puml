@@ -1,0 +1,20 @@
+@startuml init 
+DfLocalController->Topology:_init_(self,controller,enable_selective_topology_distribution)
+activate Topology
+'  # Stores topics(tenants) subscribed by lports in the current local
+        ' # controller. I,e, {tenant1:{lport1, lport2}, tenant2:{lport3}}
+        Topology->Topology:topic_subscribed = {}
+        Topology->Topology:enable_selective_topo_dist = enable_selective_topology_distribution
+        Topology->Topology:ovs_to_lport_mapping = {}
+
+        Topology->Topology:controller = controller
+        Topology->DfLocalController:self.nb_api = get_nb_api()
+        Topology->DfLocalController:self.chassis_name = get_chassis_name()
+        Topology->db_store:self.db_store = get_instance()
+
+        ' # TODO(snapiri) this should not be ovs specific
+        Topology->SwitchPort:register_created(self.switch_port_updated)
+        Topology->SwitchPort:register_updated(self.switch_port_updated)
+        Topology->SwitchPort:register_deleted(self.switch_port_deleted)
+deactivate
+@enduml
