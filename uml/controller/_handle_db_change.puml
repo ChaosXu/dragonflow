@@ -1,0 +1,37 @@
+@startuml handle db change
+DfLocalController->DfLocalController:_handle_db_changed(self,update)
+activate DfLocalController
+DfLocalController->update:action = action
+alt action == ctrl_const.CONTROLLER_REINITIALIZE
+    DfLocalController->db_store:clear()
+    DfLocalController->DfOVSDriver:initialize(self.db_change_callback,self.neutron_notifier)
+    DfLocalController->DfLocalController:sync()
+else action == ctrl_const.CONTROLLER_SYNC
+    DfLocalController->DfLocalController:sync()
+else action == ctrl_const.CONTROLLER_DBRESTART
+    DfLocalController->NbApi:db_recover_callback()
+else action == ctrl_const.CONTROLLER_SWITCH_SYNC_FINISHED
+    DfLocalController->DfLocalController:switch_sync_finished()
+else action == ctrl_const.CONTROLLER_SWITCH_SYNC_STARTED
+    DfLocalController->DfLocalController:switch_sync_started()
+else action == ctrl_const.CONTROLLER_LOG
+    DfLocalController->LOG:info('Log event: %s', str(update))
+else update.table is not None
+    alt try
+        DfLocalController-> model_framework:model_class = get_model(update.table)
+    else except KeyError
+        ' # Model class not found, possibly update was not about a model
+        DfLocalController->LOG:warning('Unknown table %s', update.table)
+    else
+        alt action == 'delete'
+            DfLocalController->DfLocalController:delete_by_id(model_class, update.key)
+        else
+            DfLocalController->model_class:obj = from_json(update.value)
+            DfLocalController->DfLocalController:_send_updates_for_object(obj)
+        end
+    end
+else
+    DfLocalController->LOG:warning('Unfamiliar update: %s', str(update))
+end
+deactivate
+@enduml

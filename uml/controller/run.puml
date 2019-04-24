@@ -1,0 +1,74 @@
+@startuml run controller
+df_lcoal_controller->DfLocalController:run()
+activate DfLocalController
+DfLocalController->NbApi:register_notification_callback(self._handle_update)
+alt self.neutron_notifier
+    DfLocalController->neutron_notifier:initialize(nb_api=self.nb_api)
+end
+DfLocalController->topology:self.topology = Topology(self,self.enable_selective_topo_dist)
+DfLocalController->FixedIntervalLoopingCall:start(interval=cfg.CONF.df.db_sync_time,initial_delay=cfg.CONF.df.db_sync_time)
+activate FixedIntervalLoopingCall
+FixedIntervalLoopingCall->DfLocalController:db_change_callback(None, None,ctrl_const.CONTROLLER_SYNC, None)
+activate DfLocalController
+DfLocalController->db_common:update = DbUpdate(table, key, action, value, topic=topic)
+DfLocalController->DfLocalController:_queue.put(update)
+deactivate
+deactivate
+
+DfLocalController->DfOvsDriver:start()
+DfLocalController->DfLocalController:_register_models()
+activate DfLocalController
+DfLocalController->DfLocalController:ignore_models = DfOVSDriver:sync_ignore_models()
+loop model in model_framework.iter_models_by_dependency_order()
+    ' # FIXME (dimak) generalize sync to support non-northbound models
+    alt model not in ignore_models:
+        DfLocalController->Sync:add_model(model)
+    end
+end
+deactivate
+
+DfLocalController->DfLocalController:register_chassis()
+activate DfLocalController
+'  # Get all chassis from nb db to db store.
+loop c in self.nb_api.get_all(core.Chassis):
+    DfLocalController->DbStore:update(c)
+end
+DfLocalController->DbStore:old_chassis = get_one(core.Chassis(id=self.chassis_name))
+
+DfLocalController->Chassis:chassis = Chassis(id=self.chassis_name,ip=self.ip,tunnel_types=self.tunnel_types)
+alt cfg.CONF.df.external_host_ip
+    DfLocalController->Chassis:external_host_ip = cfg.CONF.df.external_host_ip
+end
+DfLocalController->DbStore:update(chassis)
+
+' # REVISIT (dimak) Remove skip_send_event once there is no bind conflict
+' # between publisher service and the controoler, see bug #1651643
+alt old_chassis is None
+    DfLocalController->NbApi:create(chassis, skip_send_event=True)
+else old_chassis != chassis
+    DfLocalController->NbApi:update(chassis, skip_send_event=True)
+end
+deactivate
+
+DfLocalController->DfLocalController:sync()
+activate DfLocalController
+DfLocalController->Topology:check_topology_info()
+DfLocalController->Sync:sync()
+deactivate
+
+DfLocalController->DfLocalController:process_changes()
+activate DfLocalController
+loop True
+    DfLocalController->DfLocalController:next_update = _queue.get(block=True)
+    DfLocalController->NbApi:_notification_cb(next_update)
+    activate DfLocalController
+    NbApi->DfLocalController:_handle_update
+    activate DfLocalController
+    DfLocalController->DfLocalController:_handle_db_change
+    deactivate
+    deactivate
+    DfLocalController->DfLocalController:_queue.task_done()
+end
+deactivate
+deactivate
+@enduml

@@ -1,0 +1,45 @@
+@startuml controller main
+User->df_lcoal_controller:main
+activate df_lcoal_controller
+' chassis_name = cfg.CONF.host
+' df_config.init(sys.argv)
+
+df_lcoal_controller->NbApi:nb_api = get_instance()
+df_lcoal_controller->DfLocalController:controller = DfLocalController(chassis_name, nb_api)
+activate DfLocalController
+DfLocalController->db_store:self.db_store = get_instance()
+DfLocalController-> queue:      self._queue = PriorityQueue()
+note over DfLocalController
+    # pending_id -> (model, pender_id)
+    #       'pending_id' is the ID of the object for which we are waiting.
+    #       'model' and 'pender_id' are the model and the ID of the object
+    #       which is waiting for the object described by 'pending_id'
+end note
+DfLocalController->collections:_pending_objects = defaultdict(set)
+
+DfLocalController->DfLocalController:self.chassis_name = chassis_name
+DfLocalController->DfLocalController:self.nb_api = nb_api
+DfLocalController->nb_api:set_db_change_callback(self.db_change_callback)
+DfLocalController->cfg.CONF:self.ip = df.local_ip
+note over DfLocalController
+    # Virtual tunnel port support multiple tunnel types together
+end note
+DfLocalController->cfg.CONF:self.tunnel_types = df.tunnel_types
+
+alt cfg.CONF.df.enable_neutron_notifier:
+    DfLocalController->df_utils:self.neutron_notifier = load_driver(cfg.CONF.df.neutron_notifier,df_utils.DF_NEUTRON_NOTIFIER_DRIVER_NAMESPACE)
+end
+DfLocalController->df_utiles:self.switch_backend = load_driver(cfg.CONF.df.switch_backend,df_utils.DF_SWITCH_BACKEND_DRIVER_NAMESPACE,nb_api, cfg.CONF.df.management_ip)
+DfLocalController->DfOvsDriver:initialize(self.db_change_callback,self.neutron_notifier)
+DfLocalController->DfLocalController:self.topology = None
+DfLocalController->cfg.CONF.:self.enable_selective_topo_dist = df.enable_selective_topology_distribution
+DfLocalController->Sync:self._sync = sync.Sync(nb_api=self.nb_api,update_cb=self.update,delete_cb=self.delete,selective=self.enable_selective_topo_dist)
+DfLocalController->loopingcall:self._sync_pulse = FixedIntervalLoopingCall(self._submit_sync_event)
+DfLocalController->df_utils:self.sync_rate_limiter = RateLimiter(max_rate=1, time_unit=db_common.DB_SYNC_MINIMUM_INTERVAL)
+deactivate
+df_lcoal_controller->service:register_service('df-local-controller', nb_api)
+df_lcoal_controller->DfLocalController:run()
+activate DfLocalController
+deactivate
+deactivate
+@enduml
