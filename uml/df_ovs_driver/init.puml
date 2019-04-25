@@ -1,0 +1,32 @@
+@startuml DfOvsDriver
+Client->DfOvsDriver:_init_(self,nb_api,ip)
+activate DfOvsDriver
+DfOvsDriver->module:init_os_ken_config()
+DfOvsDriver->OvsApi:selft.vswitch_api = OvsApi(ip)
+DfOvsDriver->AppManager:self.app_mgr = get_instance()
+' self.open_flow_app = None
+' self.open_flow_service = None
+' self.neutron_notifier = None
+DfOvsDriver->Datapath:self._datapath = Datapath(datapath_layout.get_datapath_layout())
+deactivate
+
+Client->DfOvsDriver:initialize(self,db_change_callback,neutron_notifier)
+activate DfOvsDriver
+DfOvsDriver->DfSwitchDriver:initialize(db_change_callback,neutron_notifier)
+DfOvsDriver->DfOvsDriver:_initialize_app()
+activate DfOvsDriver
+alt DfOvsDriver.open_flow_app
+    DfOvsDriver->AppManager:uninstantiate(self.open_flow_app.name)
+end
+DfOvsDriver->AppManager:self.open_flow_app = instantiate(os_ken_base_app.OsKenDFAdapter,nb_api=self.nb_api,switch_backend=self,neutron_server_notifier=self.neutron_notifier,db_change_callback=self.db_change_callback)
+deactivate
+' # The OfctlService is needed to support the 'get_flows' method
+DfOvsDriver->DfOvsDriver:_initialize_service()
+activate DfOvsDriver
+alt DfOvsDriver.open_flow_service
+    DfOvsDriver->AppManager:uninstantiate(self.open_flow_service.name)
+    DfOvsDriver->AppManager:self.open_flow_service = instantiate(of_service.OfctlService)
+end
+deactivate
+deactivate
+@enduml

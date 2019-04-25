@@ -1,0 +1,24 @@
+@startuml df_ovs_driver start
+DfLocalController->DfOvsDriver:start(self)
+activate DfOvsDriver
+DfOvsDriver->OvsApi:initialize(self.db_change_callback)
+' # both set_controller and del_controller will delete flows.
+' # for reliability, here we should check if controller is set for OVS,
+' # if yes, don't set controller and don't delete controller.
+' # if no, set controller
+note over DfOvsDriver
+    targets = ('tcp:' + cfg.CONF.df_os_ken.of_listen_address + ':' +str(cfg.CONF.df_os_ken.of_listen_port))
+end note
+DfOvsDriver->OvsApi:is_controller_set = check_controller(targets)
+DfOvsDriver->cfg.CONF:integration_bridge = df.integration_bridge
+alt not is_controller_set
+    DfOvsDriver->OvsApi:set_controller(integration_bridge, [targets])
+end
+DfOvsDriver->OvsApi:is_fail_mode_set = check_controller_fail_mode('secure')
+alt not is_fail_mode_set
+    DfOvsDriver->OvsApi:set_controller_fail_mode(integration_bridge,'secure')
+end
+DfOvsDriver->open_flow_service:start()
+DfOvsDriver->open_flow_app:start()
+deactivate
+@enduml
