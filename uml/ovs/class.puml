@@ -1,0 +1,9 @@
+@startuml ovs classes 
+class DfSwitchDriver
+class DfOvsDriver
+class OvsApi
+DfOvsDriver--|>DfSwitchDriver
+DfOvsDriver-->OvsApi
+DfOvsDriver-->AppManager
+DfOvsDriver-->OsKenDFAdapter
+@enduml
