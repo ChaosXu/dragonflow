@@ -1,0 +1,33 @@
+@startuml initialize vswitch_impl
+' The interface of openvswitch
+'
+' Consumers use this class to set openvswitch or get results from
+' openvswitch.
+
+DfOvSDriver->OvsApi:_init_(ip)
+activate OvsApi
+OvsApi->OvsApi:selft.ip = ip
+OvsApi->OvsApi:self.protocol = protocol
+OvsApi->OvsApi:self.port = port
+' # NOTE: This has to be this name vsctl_timeout, as neutron will use
+' # this attribute to set the timeout of ovs db.
+OvsApi->OvsApi:self.vsctl_timeout = timeout
+OvsApi->OvsApi:self.ovsdb = None
+OvsApi->cfg.CONF:self.integration_bridge = df.integration_bridge
+alt cfg.CONF.log_dir
+    OvsApi->vlog.Vlog:init(cfg.CONF.log_dir + '/' + OVS_LOG_FILE_NAME)
+else
+    OvsApi->vlog.Vlog:init()
+end
+deactivate
+
+DfOvSDriver->OvsApi:initialize(self,db_change_callback)
+activate OvsApi
+note over OvsApi
+    db_connection = ('%s:%s:%s' % (self.protocol, self.ip, self.port))
+    OvsApi->db_change_callback:(None, None,constants.CONTROLLER_SWITCH_SYNC_STARTED, None)
+end note
+DfOvSDriver->DFOvsdbApi:self.ovsdb = DFOvsdbApi(db_connection, self.vsctl_timeout,db_change_callback)
+OvsApi->db_change_callback:(None, None,constants.CONTROLLER_SWITCH_SYNC_FINISHED, None)
+deactivate
+@enduml

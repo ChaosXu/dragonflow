@@ -1,0 +1,22 @@
+@startuml instantiate apps
+' cls=os_ken_base_app.OsKenDFAdapter,
+' nb_api=self.nb_api,
+' switch_backend=self,
+' neutron_server_notifier=self.neutron_notifier,
+' db_change_callback=self.db_change_callback
+DfOvsDriver->AppManager:instantiate(sdelf,cls,*args,**kwargs)
+activate AppManager
+AppManager->AppManager:app = _instantiate(None, cls, *args, **kwargs)
+activate AppManager
+app = cls(*args, **kwargs)
+AppManager->OsKenDFAdapter:OsKenDFAdapter(*args,**kwargs)
+' register_app(app)
+' assert app.name not in self.applications
+' AppManager->AppManager:self.applications[app.name] = app
+AppManager-->AppManager:app
+deactivate
+AppManager->AppManager:_update_bricks()
+AppManager->AppManager:._report_brick(app.name, app)
+AppManager-->DfOvsDriver: app
+deactivate
+@enduml

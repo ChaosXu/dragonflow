@@ -19,6 +19,25 @@ alt not is_fail_mode_set
     DfOvsDriver->OvsApi:set_controller_fail_mode(integration_bridge,'secure')
 end
 DfOvsDriver->open_flow_service:start()
-DfOvsDriver->open_flow_app:start()
+DfOvsDriver->OsKenDFAdapter:start()
+activate OsKenDFAdapter
+OsKenDFAdapter->OFPHandler:start()
+activate OFPHandler
+OFPHandler->OSKenApp:start()
+OFPHandler->OpenFlowController:self.controller = OpenFlowController()
+OFPHandler->hub:controller = spawn(self.controller)
+OFPHandler-->OsKenDFAdaptor:controller
+deactivate
+OsKenDFAdapter->OsKenDFAdapter:load(self,switch_backend=self.switch_backend,nb_api=self.nb_api,neutron_server_notifier=self.neutron_server_notifier)
+activate OsKenDFAdaptor
+OsKenDFAdaptor->AppDispatcher:load(self,*args,**kwargs)
+activate OsKenDFAdaptor
+note over OsKenDFAdaptor
+load dragonflow.controller.apps
+end note
+deactivate
+deactivate
+OsKenDFAdapter->OsKenDFAdapter:wait_until_ready()
+deactivate
 deactivate
 @enduml
