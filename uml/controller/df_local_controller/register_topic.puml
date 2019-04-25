@@ -1,0 +1,7 @@
+@startuml register topic
+Topology->DfLocalController:register_topic(self,topic)
+activate DfLocalController
+DfLocalController->NbApi:subscriber.register_topic(topic)
+DfLocalController->Sync:add_topic(topic)
+deactivate
+@enduml

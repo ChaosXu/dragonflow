@@ -1,0 +1,63 @@
+@startuml sync
+DfLocalController->Sync:sync(self)
+activate Sync
+note over Sync
+    Syncs all the models for all relevant topics.
+end note
+loop model in self._models
+    Sync->Sync:_update_model(model)
+    activate Sync
+    alt not self._selective or not issubclass(model, mixins.Topic)
+        Sync->NbApi:desired = get_all(model)
+        Sync->Sync:_update_objects(desired)
+    else
+        loop topic in self._topics
+            Sync->NbApi:desired = get_all(model, topic)
+            Sync->Sync:_update_objects(desired)
+            activate Sync
+            loop o in desired
+                Sync->Sync:_update_cb(o)
+                activate Sync
+                Sync->DfLocalController:update(o)
+                deactivate
+            end
+            deactivate
+        end
+    end
+    deactivate
+end
+' # Reverse order when deleting objects
+loop model in reversed(self._models):
+    Sync->Sync:_cleanup_model(model)
+    activate Sync
+    alt not self._selective or not issubclass(model, mixins.Topic)
+        Sync->NbApi:desired = get_all(model)
+        Sync->_db_store:present = get_all(model)
+        Sync->Sync:_cleanup_objects(desired, present)
+    else
+        Sync->_db_store:present_all = get_all(model)
+        ' present_by_topic = {}
+        loop o in present_all
+            Sync->present_by_topic:setdefault(o.topic, []).append(o)
+        end
+        loop topic in self._topics
+            ' # FIXME (dimak) can be avoided, we do this once in
+            ' # _update_model for the exact same topics/models.
+            ' # Maybe we can pass on the result somehow.
+            Sync->NbApi:desired = get_all(model, topic)
+            Sync->present_by_topic:present = pop(topic, [])
+            Sync->Sync:_cleanup_objects(desired, present)
+        end
+        loop objects in present_by_topic.values()
+            loop o in objects
+                Sync->Sync:_delete_cb(o)
+                activate Sync
+                Sync->DfLocalController:delete(o)
+                deactivate
+            end
+        end
+    end
+    deactivate
+end
+deactivate
+@enduml

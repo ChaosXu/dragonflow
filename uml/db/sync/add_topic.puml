@@ -1,0 +1,25 @@
+@startuml add topic
+DfLocalController->Sync:add_topic(self,topic)
+activate Sync
+note over Sync
+    Adds an new topic to watch in the NB database and pulls the new
+    objects.
+end note
+alt not self._selective or topic in self._topics
+    Sync->DfLocalController
+end
+' # Sync here, new objects might rely on objects just added
+Sync->Sync:sync()
+
+loop model in self._models
+    alt issubclass(model, mixins.Topic):
+
+
+        loop nb_obj in self._nb_api.get_all(model, topic):
+            Sync->Sync:_update_cb(nb_obj)
+        end
+    end
+end
+Sync->Sync:_topics.add(topic)
+deactivate
+@enduml
