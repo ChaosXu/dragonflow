@@ -1,0 +1,30 @@
+@startuml _process_ovs_tunnel_port
+Topology->Topology:_process_ovs_tunnel_port(self,switch_port,action)
+activate Topology
+Topology->switch_port:tunnel_type = tunnel_type
+alt not tunnel_type
+    Topology-->Topology
+end
+Topology->db_store:lswitches = get_all(l2.LogicalSwitch(network_type=tunnel_type),l2.LogicalSwitch.get_index('network_type'))
+loop lswitch in lswitches
+    Topology->l2.LogicalPort:index = get_index('lswitch_id')
+    Topology->db_store:lports = get_all(l2.LogicalPort(lswitch=lswitch),index=index)
+    loop lport in lports
+        alt lport.is_local
+            ' continue
+        end
+        ' # Update of virtual tunnel port should update remote port in
+        ' # the lswitch of same type.
+        alt try
+            alt action == "set"
+                Topology->DfLocalController:update(lport)
+            else
+                Topology->DfLocalController:delete(lport)
+            end
+        else except Exception
+            Topology->LOG:exception("Failed to process logical port""when %(action)s tunnel %(lport)s",{'action': action, 'lport': lport})
+        end
+    end
+end
+deactivate
+@enduml

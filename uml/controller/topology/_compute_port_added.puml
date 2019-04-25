@@ -1,0 +1,7 @@
+@startuml compute port added
+DfLocalController->Topology:_compute_port_added(self,switch_port)
+activate Topology
+Topology->Topology:_compute_port_updated(switch_port)
+Topology->DfLocalController:notify_port_status(switch_port, n_const.PORT_STATUS_ACTIVE)
+deactivate
+@enduml

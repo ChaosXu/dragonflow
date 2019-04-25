@@ -1,0 +1,47 @@
+@startuml switch_port_updated
+SwitchPort->Topology:switch_port_updated(self,switch_port,orig_switch_port=None)
+activate SwitchPort
+note over SwitchPort
+    Changes in ovs port status will be monitored by ovsdb monitor thread
+    and notified to topology. This method is the entry port to process
+    port online/update event
+
+    @param switch_port:
+    @return : None
+end note
+SwitchPort->LOG:info("Ovs port updated: %r", switch_port)
+
+alt switch_port.type not in _SWITCH_PORT_TYPES:
+    SwitchPort->LOG:info("Unmanaged port online: %r", switch_port)
+    SwitchPort-->SwitchPort
+end
+alt try
+    alt orig_switch_port is None:
+        SwitchPort->Topology:_handle_switch_port_added(switch_port)
+        activate Topology
+        Topology->SwitchPort:port_type = type
+        alt port_type == constants.SWITCH_COMPUTE_INTERFACE
+            Topology->Topology:_compute_port_added(switch_port)
+        else port_type == constants.SWITCH_TUNNEL_INTERFACE:
+            Topology->Topology:_tunnel_port_added(switch_port)
+        else
+            Topology->LOG:warning('Invalid port type on %r', switch_port)
+        end
+        deactivate
+    else
+        SwitchPort->Topology:_handle_switch_port_updated(switch_port)
+        activate Topology
+        Topology->SwitchPort:port_type = type
+        alt port_type == constants.SWITCH_COMPUTE_INTERFACE:
+            Topology->Topology:_compute_port_updated(switch_port)
+        else port_type == constants.SWITCH_TUNNEL_INTERFACE
+            Topology->Topology:_tunnel_port_updated(switch_port)
+        else
+            Topology->LOG:warning('Invalid port type on %r', switch_port)
+        end
+        deactivate
+    else except Exception
+        SwitchPort->LOG:exception("Exception occurred when handling port online event")
+    end
+    deactivate
+    @enduml

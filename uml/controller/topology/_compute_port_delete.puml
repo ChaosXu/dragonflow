@@ -1,0 +1,51 @@
+@startuml compute port delete
+DfLocalController->Topology:_compute_port_delete(self,switch_port)
+activate Topology
+Topology->SwitchPort:switch_port_id = id
+Topology->SwitchPort:lport_ref = lport
+Topology->lport_ref:lport = get_object()
+alt lport is None:
+    Topology->Topology:lport_mapping = ovs_to_lport_mapping.get(switch_port_id)
+    alt lport_mapping is None
+        Topology-->Topology
+    end
+    Topology->lport_mapping:topic = topic
+    Topology->ovs_to_lport_mapping:del ovs_to_lport_mapping[switch_port_id]
+    Topology->Topology:_del_from_topic_subscribed(topic, lport_mapping.lport_id)
+    Topology-->Topology
+end
+Topology->lport:topic = topic
+
+' LOG.info("The logical port(%s) is offline", lport)
+alt try
+    Topology->DfLocalController:delete(lport)
+else except Exception
+    ' LOG.exception('Failed to process logical port offline event %s',lport_ref.id)
+else finally
+    Topology->DfLocalController:notify_port_status(switch_port, n_const.PORT_STATUS_DOWN)
+
+    Topology->NbApi:migration_obj = get(migration.Migration(id=lport_ref.id))
+    alt migration_obj and migration_obj.chassis
+        ' LOG.info("Sending migrating event for %s", lport_ref.id)
+        ' migration_obj.lport = lport_ref
+        ' migration_obj.status = migration.MIGRATION_STATUS_SRC_UNPLUG
+        Topology->NbApi:update(migration_obj)
+    end
+
+    Topology->ovs_to_lport_mapping:del ovs_to_lport_mapping[switch_port_id]
+    Topology->Topology:_del_from_topic_subscribed(topic, lport_ref.id)
+    activate Topology
+    alt not self.enable_selective_topo_dist or not topic:
+        Topology-->Topology
+    end
+    Topology->Topology:port_ids = topic_subscribed[topic]
+    Topology->port_ids:remove(lport_id)
+    alt len(port_ids) == 0
+        ' LOG.info("Unsubscribe topic: %(topic)s by lport: %(id)s",{"topic": topic, "id": lport_id})
+        Topology->topic_subscribed:del topic_subscribed[topic]
+        Topology->DfLocalController:unregister_topic(topic)
+    end
+    deactivate
+end
+deactivate
+@enduml

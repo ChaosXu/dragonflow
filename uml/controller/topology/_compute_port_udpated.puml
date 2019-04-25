@@ -1,0 +1,52 @@
+@startuml compute port updated
+Topology->Topology:_compute_port_updatedd(self,switch_port)
+activate Topology
+Topology->Topology:lport = _get_lport(switch_port)
+alt lport is None
+    Topology->LOG:warning("No logical port found for ovs port: %r",switch_port)
+    Topology-->Topology
+end
+Topology->lport:topic = topic
+alt not topic
+    Topology-->Topology
+end
+Topology->Topology:_add_to_topic_subscribed(topic, lport.id)
+activate Topology
+alt not self.enable_selective_topo_dist or not topic
+    Topology-->Topology
+end
+alt topic not in self.topic_subscribed:
+    '  LOG.info("Subscribe topic: %(topic)s by lport: %(id)s",{"topic": topic, "id": lport_id})
+    Topology->DfLocalController:register_topic(topic)
+    Topology->set:topic_subscribed[topic] = set([lport_id])
+else
+    Topology->:topic_subscribed[topic]:add(lport_id)
+end
+deactivate
+
+Topology->Topology:ovs_to_lport_mapping[switch_port.id] = OvsLportMapping(lport_id=lport.id, topic=topic)
+
+Topology->lport:chassis = binding.chassis
+' # check if migration occurs
+alt chassis.id != self.chassis_name:
+    Topology->lport:device_owner = device_owner
+    alt n_const.DEVICE_OWNER_COMPUTE_PREFIX in device_owner
+        Topology->LOG:info("Prepare migrate lport %(lport)s to %(chassis)s",{"lport": lport.id, "chassis": chassis})
+        Topology->Topology:nb_api.create(migration.Migration(id=lport.id, dest_chassis=self.chassis_name,status=migration.MIGRATION_STATUS_DEST_PLUG))
+        Topology-->Topology
+    end
+end
+
+Topology->SwitchPort:cached_lport = lport.get_object()
+alt not cached_lport
+    ' # If the logical port is not in db store it has not been applied
+    ' # to dragonflow apps. We need to update it in dragonflow controller
+    Topology->LOG:info("A local logical port(%s) is online", lport)
+    alt
+        Topology->DfLocalController:update(lport)
+    else except Exception
+        Topology->LOG:exception('Failed to process logical port online ''event: %s', lport)
+    end
+end
+deactivate
+@enduml

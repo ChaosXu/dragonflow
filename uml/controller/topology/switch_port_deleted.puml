@@ -1,0 +1,21 @@
+@startuml switch port deleted
+SwitchPort->Topology:switch_port_deleted(self,switch_port)
+activate Topology
+note over Topology
+    Changes in ovs port status will be monitored by ovsdb monitor thread
+    and notified to topology. This method is the entrance port to process
+    port offline event
+    @param switch_port:
+    @return : None
+end note
+alt switch_port.type not in _SWITCH_PORT_TYPES
+    SwitchPort->LOG:info("Unmanaged port offline: %r", switch_port)
+    Topology-->SwitchPort
+end
+alt
+    Topology->Topology:_handle_switch_port_deleted(switch_port)
+else except Exception
+    SwitchPort->LOG:exception("Exception occurred when handling ""ovs port offline event")
+end
+deactivate
+@enduml
